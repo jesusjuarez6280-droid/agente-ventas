@@ -1,0 +1,296 @@
+# Agente de atención telefónica conectado a inventario
+
+Contesta llamadas, entiende el pedido como lo dice el cliente, verifica contra
+inventario real, arma el pedido y lo deja registrado en el ERP.
+
+El mismo cerebro atiende voz, WhatsApp y texto. Cambiar de giro es cambiar un
+archivo de configuración. Cambiar de ERP es escribir un adaptador.
+
+---
+
+## Arrancar
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+```bash
+cp .env.example .env
+```
+
+```bash
+python scripts/init_db.py --reset
+```
+
+Verifica que el núcleo funciona — no gasta un solo token de modelo:
+
+```bash
+python scripts/probar_nucleo.py
+```
+
+Y que los dos carriles de voz no se encimen:
+
+```bash
+python scripts/probar_puente.py
+```
+
+## Demostrarlo sin pagar nada
+
+Antes de tener llave de API, el sistema completo corre en modo demostración:
+
+```bash
+python scripts/demo_sin_api.py
+```
+
+Reconoce al que llama, entiende *"cuarenta bultos de harina refinada"*, verifica
+inventario real, ofrece alternativa cuando falta azúcar, arma el pedido y deja
+traza. Costo: cero.
+
+**Qué es y qué no es.** No es la inteligencia artificial: es una máquina de
+estados con reglas que llama a las mismas herramientas. La conversación va sobre
+rieles — si el cliente se sale del guion, se atora. Lo que sí es idéntico es todo
+lo de abajo: catálogo, inventario, plan comercial, pedido, auditoría.
+
+Sirve para vender la mecánica. La conversación libre se enseña ya con la llave
+puesta.
+
+## Cuánto cuesta operarlo
+
+```bash
+python scripts/costo.py 8 500
+```
+
+Con una llamada de 8 turnos, tarifa de primera parte y caché de prompt activo:
+
+| Modelo | Por llamada | 500 llamadas/mes |
+|---|---|---|
+| Opus 5 | $0.156 | $77.93 |
+| Sonnet 5 | $0.095 | $47.43 |
+| Haiku 4.5 | $0.030 | $15.25 |
+
+El carril rápido es el 2.2% del total. No es ahí donde está el gasto.
+
+No incluye telefonía (número, minutos, transcripción, voz) — esos precios se
+toman de la página vigente de Twilio porque varían por país.
+
+Para conversar hace falta poner `ANTHROPIC_API_KEY` en `.env`. Después:
+
+```bash
+python scripts/demo_llamada.py
+```
+
+O interactivo, escribiendo tú:
+
+```bash
+python src/agente/canales/texto.py +523311112222
+```
+
+---
+
+## La regla que sostiene todo
+
+**El modelo nunca inventa un dato.** Solo hace tres cosas: entender, llamar
+herramientas y hablar. Cada existencia, precio y fecha sale de una consulta
+determinista. Si una herramienta falla, el agente dice "déjeme confirmarlo y le
+marco" — no adivina.
+
+Esa sola regla es la diferencia entre una demo bonita y algo que puedes poner
+frente a tus clientes.
+
+---
+
+## Cómo está armado
+
+```
+Canales      voz · whatsapp · texto        canales/
+   ↓
+Cerebro      turno con Claude + tools      cerebro.py
+   ↓
+Herramientas 9 operaciones deterministas   herramientas.py
+   ↓
+Núcleo       catálogo · inventario · pedidos
+   ↓
+Adaptador    un archivo por ERP            erp/
+   ↓
+ERP del cliente
+```
+
+| Archivo | Qué resuelve |
+|---|---|
+| [catalogo.py](src/agente/catalogo.py) | De *"mándame 20 bultos de la de siempre"* al SKU del ERP |
+| [inventario.py](src/agente/inventario.py) | Disponible real y reservas suaves con vencimiento |
+| [pedidos.py](src/agente/pedidos.py) | Borrador local → aprobación → escritura idempotente al ERP |
+| [herramientas.py](src/agente/herramientas.py) | Las 9 operaciones que el modelo puede invocar |
+| [cerebro.py](src/agente/cerebro.py) | El turno conversacional, con streaming y caché de prompt |
+| [erp/puerto.py](src/agente/erp/puerto.py) | El contrato que cumple cualquier ERP |
+| [canales/voz.py](src/agente/canales/voz.py) | WebSocket de Twilio ConversationRelay |
+| [config/giros/granos.yaml](config/giros/granos.yaml) | Todo lo específico del negocio |
+
+---
+
+## Las decisiones que importan
+
+**Inventario espejo, no consulta en vivo.** Durante una llamada se consulta una
+copia local que se sincroniza aparte. Un ERP lento no puede colgar una llamada.
+
+**Disponible ≠ existencia.** Es `existencia − comprometido − reservas activas`.
+Y si el pedido se come casi todo lo disponible, el agente no se compromete:
+el inventario real nunca es exacto.
+
+**Reserva suave.** Al anotar una partida se aparta el material con vencimiento
+(30 min por defecto). Si el pedido no se cierra, se libera solo.
+
+**El pedido se crea en dos tiempos.** Borrador local durante la llamada, commit
+al ERP al final, con clave de idempotencia. Si se cae la llamada o el modelo se
+equivoca, el ERP nunca se enteró. Un reintento por timeout no duplica.
+
+**Humano en el circuito desde el día 1.** Con `REQUIERE_APROBACION_HUMANA=true`
+(por defecto) todo pedido queda en `por_aprobar` y una persona lo suelta con un
+clic. Se abre la escritura automática cuando la métrica de acierto lo justifique,
+no antes. Nadie confía en que una IA escriba al ERP el primer día, y con razón.
+
+**Ambigüedad se pregunta, no se adivina.** Si dos productos empatan, el agente
+pregunta. `"azúcar"` con dos azúcares en catálogo es ambiguo aunque sea alias
+exacto de uno de ellos.
+
+**Trazabilidad de origen.** Cada partida guarda la frase que la originó y, en
+voz, el milisegundo del audio. Cuando el cliente reclame *"yo pedí 200, no 100"*,
+se abre el renglón y suena el audio exacto.
+
+**El catálogo aprende.** Cada término que un cliente usa y el catálogo no
+entiende queda en `alias_pendientes`. Se revisan, se agregan como alias, y la
+siguiente llamada ya lo entiende.
+
+**Nunca se contesta solo "no hay".** Cuando falta material,
+`inventario.plan_comercial()` arma la respuesta completa: cuánto sí hay hoy,
+cuándo entra el resto (compras en tránsito y producción programada), y qué
+sustituto sirve — priorizando el que ese cliente **ya compra**, porque una
+alternativa que ya usó no hay que venderla. El orden lo calcula el sistema; el
+modelo solo lo redacta.
+
+```
+Cliente pide 500 kg de azúcar refinada, solo hay 150:
+  1. sustituto           azúcar estándar cubre la cantidad completa hoy,
+                         y este cliente ya lo ha comprado antes
+  2. completo_diferido   el pedido completo se surte desde el 21 de agosto
+                         (compra confirmada)
+  3. parcial_hoy         se pueden surtir 150 kg de inmediato
+```
+
+---
+
+## Dos modelos, en paralelo — nunca en cadena
+
+Hay dos carriles corriendo al mismo tiempo sobre el mismo turno:
+
+| Carril | Modelo | Qué hace | Puede equivocarse en |
+|---|---|---|---|
+| **Rápido** | Haiku 4.5 | Una frase de acuse: *"Va, déjeme checar la harina"* | Nada. No tiene herramientas ni ve el inventario, y tiene prohibido decir cualquier dato |
+| **Pesado** | Opus 5 | El trabajo real: herramientas, inventario, pedido | Todo lo que importa — por eso es el bueno |
+
+Arrancan **juntos**. Si fueran en cadena sumarían latencias (1.4–2.6 s de silencio
+en vez de 0.8–2 s); en paralelo el rápido solo ocupa el silencio que de todos
+modos iba a existir.
+
+Reglas que hacen que no se estorben, verificadas en `scripts/probar_puente.py`:
+
+- Si el pesado alcanza a hablar primero, **el puente se descarta**. Dos voces
+  encimadas suenan a sistema roto, peor que el silencio.
+- Si el carril rápido falla o se cae, la llamada sigue. A lo mucho hay silencio.
+- Se apaga entero con `USAR_PUENTE=false`.
+
+Costo del carril rápido: unos 50 tokens por turno en el modelo más barato.
+Medio centavo de dólar por llamada de diez turnos.
+
+## Que suene a persona
+
+| Técnica | Dónde está |
+|---|---|
+| **Precarga por número entrante** — al primer timbrazo ya se sabe quién llama y qué compra | `voz.py:entrante` |
+| **Carril rápido** — la frase de acuse sale mientras el modelo grande trabaja | `cerebro.py:_emitir_puente` |
+| **Relleno fijo** — respaldo cuando el puente está apagado | `cerebro.py:RELLENOS` |
+| **Interrupción** — si el cliente habla encima, la voz se corta al instante | `voz.py` evento `interrupt` |
+| **Streaming al TTS** — el audio empieza antes de que termine la frase | `cerebro.py:responder` |
+| **Esfuerzo bajo, no modelo bajo** — `effort: low` recorta latencia sin degradar el modelo | `config.py:esfuerzo` |
+| **Marcar 0 siempre lleva a una persona** | `voz.py` evento `dtmf` |
+
+Presupuesto objetivo: menos de 1 segundo de silencio antes de que el agente
+empiece a hablar.
+
+---
+
+## Conectar un ERP real
+
+Se implementa [`PuertoERP`](src/agente/erp/puerto.py) — ocho operaciones — y se
+registra en `erp/__init__.py`. Nada más del sistema se entera de qué ERP hay
+detrás.
+
+```python
+class ERPOdoo(PuertoERP):
+    nombre = "odoo"
+
+    def sincronizar_existencias(self) -> list[dict]:
+        ...  # XML-RPC, SQL, CSV por SFTP, lo que ese ERP permita
+```
+
+Orden de preferencia para conectar, de mejor a peor:
+
+1. API oficial (REST/SOAP/XML-RPC)
+2. Réplica de lectura de la base + escritura por API
+3. Archivos por SFTP (CSV/EDI) — muy común en ERPs mexicanos
+4. RPA / navegador headless — último recurso
+5. Sin ERP: el sistema mismo es el registro
+
+---
+
+## Adaptar a otro giro
+
+Se copia `config/giros/granos.yaml`, se cambia el contenido, y se apunta
+`GIRO=` en el `.env`. Ahí viven unidades, sinónimos, guion, mínimos, políticas
+de crédito, qué puede prometer el agente y cuándo escalar. **El motor no cambia.**
+
+---
+
+## Voz en producción
+
+```bash
+uvicorn agente.canales.voz:app --host 0.0.0.0 --port 8080
+```
+
+El número de Twilio apunta a `POST /voz/entrante`, y `URL_WEBSOCKET_VOZ` en el
+`.env` apunta a `wss://tu-dominio/voz/flujo`.
+
+Endpoints de operación:
+
+| Ruta | Para qué |
+|---|---|
+| `GET /salud` | Sonda de monitoreo y pedidos pendientes |
+| `GET /pedidos/por-aprobar` | Bandeja de revisión humana |
+| `POST /pedidos/{folio}/aprobar` | Aprueba y escribe al ERP |
+| `POST /pedidos/{folio}/rechazar` | Cancela y libera reservas |
+
+---
+
+## Estado actual
+
+Funcionando y verificado:
+
+- Catálogo, unidades, inventario, reservas, pedidos, idempotencia y traza —
+  cubierto por `scripts/probar_nucleo.py`, todo en verde
+- Adaptador de ERP simulado, con el contrato listo para uno real
+- Canal de texto y servidor de voz completos
+
+Sin ejercitar todavía:
+
+- El turno con Claude, por falta de `ANTHROPIC_API_KEY` en el equipo. El código
+  está escrito y compila; falta correrlo contra la API.
+- El canal de voz contra Twilio real. Necesita cuenta, número y URL pública.
+
+Lo que sigue, en orden:
+
+1. Poner la API key y correr `demo_llamada.py`
+2. Cargar el catálogo real de la empresa (reemplazar `data/seed/`) y medir cuántas
+   frases reales resuelve bien
+3. Twilio + un número + túnel, y hacer la primera llamada de verdad
+4. Bandeja de aprobación con interfaz, no solo API
+5. Adaptador del ERP real, cuando se defina cuál

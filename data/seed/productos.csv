@@ -1,0 +1,11 @@
+sku|nombre_erp|nombre_corto|alias|unidad_base|presentaciones|precio_kg|activo
+HAR-TRG-REF|HARINA DE TRIGO REFINADA|harina de trigo refinada|la de siempre;harina blanca;trigo refinada;harina refinada;la refinada|kg|kilo:1;bulto:50;tarima:2000|18.50|1
+HAR-TRG-INT|HARINA DE TRIGO INTEGRAL|harina de trigo integral|integral;harina integral;trigo integral|kg|kilo:1;bulto:50;tarima:2000|21.00|1
+HAR-MAI-NIX|HARINA DE MAIZ NIXTAMALIZADA|harina de maiz nixtamalizada|maseca;harina de maiz;nixtamalizada;maiz nixtamal|kg|kilo:1;bulto:20;tarima:1000|16.80|1
+AZU-EST-STD|AZUCAR ESTANDAR|azucar estandar|azucar;azucar blanca;estandar|kg|kilo:1;bulto:50;tarima:2000|24.30|1
+AZU-REF-EXT|AZUCAR REFINADA EXTRAFINA|azucar refinada extrafina|refinada;azucar refinada;extrafina|kg|kilo:1;bulto:50;tarima:2000|27.90|1
+FRJ-NEG-1RA|FRIJOL NEGRO PRIMERA|frijol negro primera|frijol negro;negro de primera;frijol|kg|kilo:1;bulto:50;tarima:1500|32.00|1
+ARR-SUP-MOR|ARROZ SUPER EXTRA MORELOS|arroz super extra morelos|arroz morelos;arroz;super extra|kg|kilo:1;bulto:25;tarima:1000|28.40|1
+AVE-HOJ-NAT|AVENA EN HOJUELA NATURAL|avena en hojuela natural|avena;hojuela;avena natural|kg|kilo:1;bulto:25;tarima:750|22.10|1
+SAL-REF-YOD|SAL REFINADA YODADA|sal refinada yodada|sal;sal yodada;sal refinada|kg|kilo:1;bulto:25;tarima:1000|6.90|1
+MAN-VEG-HID|MANTECA VEGETAL HIDROGENADA|manteca vegetal|manteca;vegetal;manteca hidrogenada|kg|kilo:1;caja:20;tarima:800|38.60|1

@@ -1,0 +1,6 @@
+sku|almacen|cantidad_kg|fecha_estimada|origen|confianza|referencia
+AZU-REF-EXT|CEDIS-GDL|8000|2026-08-21|compra|confirmada|OC-4471
+AZU-REF-EXT|CEDIS-GDL|12000|2026-09-02|compra|estimada|OC-4498
+MAN-VEG-HID|CEDIS-GDL|2000|2026-08-24|compra|confirmada|OC-4472
+AVE-HOJ-NAT|CEDIS-GDL|3000|2026-08-27|produccion|estimada|OP-118
+HAR-TRG-INT|CEDIS-GDL|6000|2026-08-22|produccion|confirmada|OP-115

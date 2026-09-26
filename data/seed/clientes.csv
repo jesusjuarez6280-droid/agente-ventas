@@ -1,0 +1,5 @@
+cliente_id|nombre|razon_social|telefono|vendedor|limite_credito|saldo_actual|dias_credito|activo
+C-0001|Alimentos del Valle|ALIMENTOS DEL VALLE SA DE CV|+523311112222|Luis Ramirez|250000.00|84300.00|30|1
+C-0002|Panificadora Rosa|PANIFICADORA ROSA SA DE CV|+523311113333|Luis Ramirez|80000.00|12500.00|15|1
+C-0003|Abarrotes El Puente|ABARROTES EL PUENTE SA|+523311114444|Maria Solis|40000.00|39100.00|15|1
+C-0004|Tortilleria La Guadalupana|MARIA G HERNANDEZ|+523311115555|Maria Solis|15000.00|0.00|0|1

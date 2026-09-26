@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+data/*.db
+data/audio/
+.venv/
+venv/
+
+# Documentos de producto reales, no forman parte del proyecto
+Productos/
