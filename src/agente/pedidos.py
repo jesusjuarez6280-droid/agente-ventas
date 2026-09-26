@@ -111,11 +111,11 @@ def agregar_partida(folio: str, sku: str, cantidad: float, unidad: str,
         ).fetchone()
         linea = fila["n"] + 1
         cx.execute(
-            "INSERT INTO partidas (partida_id, folio, linea, sku, descripcion,"
+            "INSERT INTO partidas (partida_id, tenant, folio, linea, sku, descripcion,"
             " cantidad_kg, cantidad_texto, precio_unitario, importe, reserva_id,"
-            " turno_id, offset_audio_ms, frase_origen) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            " turno_id, offset_audio_ms, frase_origen) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
-                f"P-{uuid.uuid4().hex[:10]}", folio, linea, sku,
+                f"P-{uuid.uuid4().hex[:10]}", CFG.tenant, folio, linea, sku,
                 producto["nombre_erp"], cantidad_kg, f"{cantidad:g} {unidad}",
                 precio, importe, reserva_id, turno_id, offset_audio_ms, frase_origen,
             ),
@@ -229,13 +229,77 @@ def cerrar(folio: str, fecha_entrega: str | None = None,
     return datos
 
 
+def revalidar(folio: str) -> dict:
+    """Comprueba que el pedido todavia se puede surtir, y vuelve a apartar.
+
+    Un pedido puede esperar horas en la bandeja, y la reserva dura treinta
+    minutos. Sin este paso pasaba esto: a las 9:00 se aparta el unico material;
+    a las 9:30 la reserva vence y el material queda libre; a las 9:35 otro
+    cliente lo aparta; a las 9:40 alguien aprueba el primer pedido y se escribe
+    al ERP sin apartar nada, porque ya no habia reserva viva que consumir. Los
+    dos clientes tienen prometido el mismo material.
+
+    Devuelve que partidas ya no se pueden surtir. Lista vacia significa que el
+    pedido esta apartado de nuevo y se puede escribir.
+    """
+    partidas = db.consultar(
+        "SELECT partida_id, linea, sku, descripcion, cantidad_kg, reserva_id"
+        " FROM partidas WHERE folio = ? ORDER BY linea",
+        (folio,),
+    )
+
+    problemas: list[dict] = []
+    for p in partidas:
+        viva = db.uno(
+            "SELECT 1 AS x FROM reservas WHERE reserva_id = ? AND estado = 'activa'"
+            " AND vence_en > ?",
+            (p["reserva_id"], db.ahora()),
+        )
+        if viva:
+            continue
+
+        # La reserva se cayo: se intenta apartar de nuevo al precio de hoy.
+        nueva = inventario.reservar(p["sku"], p["cantidad_kg"], folio)
+        if nueva:
+            with db.tx() as cx:
+                cx.execute(
+                    "UPDATE partidas SET reserva_id = ? WHERE partida_id = ?",
+                    (nueva, p["partida_id"]),
+                )
+        else:
+            disp = inventario.disponibilidad(p["sku"], p["cantidad_kg"])
+            problemas.append({
+                "linea": p["linea"],
+                "sku": p["sku"],
+                "descripcion": p["descripcion"],
+                "pedido_kg": p["cantidad_kg"],
+                "disponible_kg": disp.disponible_kg,
+                "detalle": (
+                    f"La reserva vencio y ya no hay material: se pidieron "
+                    f"{p['cantidad_kg']:,.0f} kg y quedan {disp.disponible_kg:,.0f} kg."
+                ),
+            })
+
+    return {"ok": not problemas, "problemas": problemas}
+
+
 def escribir_en_erp(folio: str) -> dict:
     """Manda el pedido al ERP. Solo corre sobre pedidos ya confirmados.
 
-    Este es el unico punto del sistema que escribe hacia afuera, y es
-    idempotente: reintentar nunca duplica.
+    Este es el unico punto del sistema que escribe hacia afuera. Tres cosas lo
+    sostienen:
+
+    1. Se revalida el material antes de escribir. Si la reserva vencio y ya no
+       hay, el pedido vuelve a revision en vez de prometer lo que no existe.
+    2. La idempotencia se registra en una tabla propia ANTES de llamar al ERP.
+       Antes se deducia de pedidos.folio_erp, que se llena despues de que el
+       ERP responde: si el proceso moria entre la respuesta y el UPDATE, el
+       reintento creaba un segundo pedido por la misma venta.
+    3. Marcar 'en_erp' y consumir las reservas ocurre en UNA transaccion. Antes
+       eran dos, y morir en medio dejaba el pedido en el ERP con su material
+       sin apartar.
     """
-    cab = db.uno("SELECT * FROM pedidos WHERE folio = ?", (folio,))
+    cab = db.uno("SELECT * FROM pedidos WHERE tenant = ? AND folio = ?", (CFG.tenant, folio))
     if not cab:
         return {"ok": False, "mensaje": f"No existe el pedido {folio}."}
     if cab["estado"] == "en_erp":
@@ -247,9 +311,71 @@ def escribir_en_erp(folio: str) -> dict:
             "mensaje": f"El pedido esta en estado '{estado_actual}', se requiere 'confirmado'.",
         }
 
+    # --- Reintento de un intento anterior que quedo a medias ----------------
+    previo = db.uno("SELECT * FROM idempotencia_erp WHERE clave = ?", (folio,))
+    if previo and previo["estado"] == "confirmada":
+        with db.tx() as cx:
+            cx.execute(
+                "UPDATE pedidos SET estado = 'en_erp', folio_erp = ?, actualizado_en = ?"
+                " WHERE folio = ?",
+                (previo["folio_erp"], db.ahora(), folio),
+            )
+            inventario.consumir_de_pedido(folio, cx)
+        return {
+            "ok": True, "folio_erp": previo["folio_erp"],
+            "mensaje": "Ya se habia escrito antes; no se duplico.",
+        }
+
     erp = obtener_erp()
+
+    if previo and previo["estado"] == "en_vuelo":
+        # El intento anterior no se sabe si llego. Se le pregunta al ERP en vez
+        # de escribir a ciegas, que es justo como se duplican los pedidos.
+        existente = erp.buscar_por_clave(folio)
+        if existente:
+            folio_erp = existente.get("folio_erp") or previo["folio_erp"]
+            with db.tx() as cx:
+                cx.execute(
+                    "UPDATE idempotencia_erp SET estado = 'confirmada', folio_erp = ?,"
+                    " cerrada_en = ? WHERE clave = ?",
+                    (folio_erp, db.ahora(), folio),
+                )
+                cx.execute(
+                    "UPDATE pedidos SET estado = 'en_erp', folio_erp = ?, actualizado_en = ?"
+                    " WHERE folio = ?",
+                    (folio_erp, db.ahora(), folio),
+                )
+                inventario.consumir_de_pedido(folio, cx)
+            return {"ok": True, "folio_erp": folio_erp,
+                    "mensaje": "El intento anterior si habia llegado; no se duplico."}
+
     if not erp.esta_disponible():
         return {"ok": False, "mensaje": "El ERP no responde; el pedido queda en cola."}
+
+    revision = revalidar(folio)
+    if not revision["ok"]:
+        with db.tx() as cx:
+            cx.execute(
+                "UPDATE pedidos SET estado = 'por_aprobar', motivo_fallo = ?,"
+                " actualizado_en = ? WHERE folio = ?",
+                ("Material agotado mientras esperaba aprobacion.", db.ahora(), folio),
+            )
+        return {
+            "ok": False,
+            "mensaje": "El material se agoto mientras el pedido esperaba. Vuelve a revision.",
+            "problemas": revision["problemas"],
+        }
+
+    # Se deja constancia ANTES de llamar: si el proceso muere despues de que el
+    # ERP recibio la orden, el reintento encuentra esta marca y pregunta en vez
+    # de escribir otra vez.
+    with db.tx() as cx:
+        cx.execute(
+            "INSERT OR REPLACE INTO idempotencia_erp (clave, tenant, folio_erp,"
+            " estado, intentos, creada_en) VALUES (?,?,?, 'en_vuelo', ?, ?)",
+            (folio, CFG.tenant, None,
+             (previo["intentos"] + 1) if previo else 1, db.ahora()),
+        )
 
     datos = resumen(folio)
     resultado = erp.crear_pedido(
@@ -266,19 +392,29 @@ def escribir_en_erp(folio: str) -> dict:
     with db.tx() as cx:
         if resultado.ok:
             cx.execute(
+                "UPDATE idempotencia_erp SET estado = 'confirmada', folio_erp = ?,"
+                " cerrada_en = ? WHERE clave = ?",
+                (resultado.folio_erp, db.ahora(), folio),
+            )
+            cx.execute(
                 "UPDATE pedidos SET estado = 'en_erp', folio_erp = ?, actualizado_en = ?"
                 " WHERE folio = ?",
                 (resultado.folio_erp, db.ahora(), folio),
             )
+            # Misma transaccion: el pedido no puede quedar en el ERP con su
+            # material sin apartar.
+            inventario.consumir_de_pedido(folio, cx)
         else:
+            cx.execute(
+                "UPDATE idempotencia_erp SET estado = 'fallida', detalle = ?,"
+                " cerrada_en = ? WHERE clave = ?",
+                (resultado.mensaje, db.ahora(), folio),
+            )
             cx.execute(
                 "UPDATE pedidos SET estado = 'fallido', motivo_fallo = ?,"
                 " actualizado_en = ? WHERE folio = ?",
                 (resultado.mensaje, db.ahora(), folio),
             )
-
-    if resultado.ok:
-        inventario.consumir_de_pedido(folio)
 
     return {"ok": resultado.ok, "folio_erp": resultado.folio_erp, "mensaje": resultado.mensaje}
 

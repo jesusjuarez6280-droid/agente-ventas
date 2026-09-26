@@ -176,7 +176,69 @@ CREATE TABLE IF NOT EXISTS reposiciones (
 );
 CREATE INDEX IF NOT EXISTS ix_repo_sku ON reposiciones (tenant, sku, fecha_estimada);
 
+-- @migraciones — de aqui en adelante, sentencia por sentencia y tolerando
+-- que ya existan. El orden importa: los indices van despues de sus ALTER.
+
 -- Marca si una persona tuvo que corregir el pedido antes de aprobarlo. De aqui
 -- sale la tasa de acierto, que es la metrica que decide cuando se le suelta al
 -- agente la escritura automatica al ERP.
 ALTER TABLE pedidos ADD COLUMN corregido_en_revision INTEGER NOT NULL DEFAULT 0;
+
+-- ---------------------------------------------------------------------------
+-- Correcciones de la auditoria
+-- ---------------------------------------------------------------------------
+
+-- `partidas` no llevaba tenant, pese a que el comentario de arriba afirmaba que
+-- todas lo llevaban. Sin el, salud_catalogo unia partidas por SKU y le sumaba a
+-- un cliente las ventas de otro que vendiera el mismo producto.
+ALTER TABLE partidas ADD COLUMN tenant TEXT NOT NULL DEFAULT '';
+
+-- Idempotencia real de la escritura al ERP. Antes se deducia de pedidos.folio_erp,
+-- que se llena DESPUES de que el ERP responde: si el proceso moria en medio, el
+-- reintento creaba un segundo pedido. Aqui la clave se registra en la misma
+-- transaccion que marca el pedido como escrito.
+CREATE TABLE IF NOT EXISTS idempotencia_erp (
+    clave        TEXT PRIMARY KEY,       -- el folio del borrador
+    tenant       TEXT NOT NULL,
+    folio_erp    TEXT,
+    estado       TEXT NOT NULL,          -- en_vuelo | confirmada | fallida
+    intentos     INTEGER NOT NULL DEFAULT 1,
+    detalle      TEXT,
+    creada_en    TEXT NOT NULL,
+    cerrada_en   TEXT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_partidas_linea ON partidas (folio, linea);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_traza_secuencia ON traza (conversacion_id, secuencia);
+CREATE INDEX IF NOT EXISTS ix_partidas_tenant ON partidas (tenant, sku);
+CREATE TABLE IF NOT EXISTS erp_pedidos (
+    folio_erp   TEXT PRIMARY KEY,
+    tenant      TEXT NOT NULL,
+    clave       TEXT NOT NULL,
+    cliente_id  TEXT,
+    total       REAL NOT NULL DEFAULT 0,
+    cuerpo      TEXT,
+    creado_en   TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_erp_clave ON erp_pedidos (tenant, clave);
+CREATE TABLE IF NOT EXISTS usuarios (
+    usuario        TEXT NOT NULL,
+    tenant         TEXT NOT NULL,
+    nombre         TEXT,
+    password_hash  TEXT NOT NULL,
+    rol            TEXT NOT NULL DEFAULT 'consulta',
+    activo         INTEGER NOT NULL DEFAULT 1,
+    creado_en      TEXT NOT NULL,
+    ultimo_acceso  TEXT,
+    PRIMARY KEY (tenant, usuario)
+);
+CREATE TABLE IF NOT EXISTS sesiones (
+    token       TEXT PRIMARY KEY,
+    tenant      TEXT NOT NULL,
+    usuario     TEXT NOT NULL,
+    rol         TEXT NOT NULL,
+    creada_en   TEXT NOT NULL,
+    vence_en    TEXT NOT NULL,
+    revocada    INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS ix_sesiones_usuario ON sesiones (tenant, usuario);

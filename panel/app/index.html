@@ -78,6 +78,27 @@
 </head>
 <body>
 
+<div id="login" hidden style="position:fixed;inset:0;z-index:50;display:flex;
+     align-items:center;justify-content:center;background:var(--surface-page)">
+  <form id="form-login" onsubmit="return false" style="width:340px;padding:var(--space-8);background:var(--surface-card);
+        border:1px solid var(--border-subtle);border-radius:var(--radius-card);
+        box-shadow:var(--shadow-raised);display:flex;flex-direction:column;gap:var(--space-5)">
+    <h1 style="font:var(--text-h4);color:var(--text-strong);margin:0">Bandeja de aprobación</h1>
+    <label style="font:var(--text-caption);color:var(--text-muted)">Usuario
+      <input name="usuario" autocomplete="username" required
+             style="width:100%;height:34px;margin-top:4px;padding:0 10px;font:inherit;
+                    border:1px solid var(--border-default);border-radius:var(--radius-control)"></label>
+    <label style="font:var(--text-caption);color:var(--text-muted)">Contraseña
+      <input name="password" type="password" autocomplete="current-password" required
+             style="width:100%;height:34px;margin-top:4px;padding:0 10px;font:inherit;
+                    border:1px solid var(--border-default);border-radius:var(--radius-control)"></label>
+    <div id="login-error" style="font:var(--text-caption);color:var(--status-danger)" hidden></div>
+    <button type="submit" style="height:36px;border:0;border-radius:var(--radius-control);
+            background:var(--surface-accent);color:var(--text-on-accent);font:var(--text-label);
+            cursor:pointer">Entrar</button>
+  </form>
+</div>
+
 <header>
   <div>
     <h1 style="font:var(--text-h3);color:var(--text-strong);margin:0">Bandeja de aprobación</h1>
@@ -94,6 +115,8 @@
           font:var(--text-label);cursor:pointer;display:flex;align-items:center;gap:var(--space-4)">
     Aprobar sin banderas <kbd>⇧A</kbd>
   </button>
+  <div id="quien" style="font:var(--text-caption);color:var(--text-muted);
+       display:flex;align-items:center;gap:var(--space-4)"></div>
 </header>
 
 <div id="aviso" class="aviso" hidden></div>
@@ -124,14 +147,70 @@
 
 const API = '/api';
 let pedidos = [];
-let filtro = 'todos';
-let indice = 0;
+let token = null;
 
 const $ = id => document.getElementById(id);
 const pesos = n => '$' + (n ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const kilos = n => (n ?? 0).toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' kg';
 const escapar = s => String(s ?? '').replace(/[&<>"']/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// El token vive en sessionStorage: se va al cerrar la pestaña, que es lo que
+// se quiere en una maquina compartida de mesa de control. El try/catch es
+// porque en ventana privada el acceso puede lanzar.
+try { token = sessionStorage.getItem('token'); } catch { token = null; }
+
+function guardarToken(t) {
+  token = t;
+  try { t ? sessionStorage.setItem('token', t) : sessionStorage.removeItem('token'); } catch {}
+}
+
+/** Toda llamada a la API pasa por aquí: adjunta el token y, si el servidor
+ *  responde 401, devuelve al login en vez de dejar la pantalla en blanco. */
+async function api(ruta, opciones = {}) {
+  const r = await fetch(API + ruta, {
+    ...opciones,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? {'Authorization': 'Bearer ' + token} : {}),
+      ...(opciones.headers || {}),
+    },
+  });
+  if (r.status === 401) { guardarToken(null); mostrarLogin(); throw new Error('sesión vencida'); }
+  return r;
+}
+
+function mostrarLogin(mensaje = '') {
+  $('login').hidden = false;
+  $('login-error').hidden = !mensaje;
+  $('login-error').textContent = mensaje;
+  $('form-login').usuario?.focus();
+}
+
+$('form-login').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target;
+  const r = await fetch(API + '/entrar', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({usuario: f.usuario.value, password: f.password.value}),
+  });
+  if (!r.ok) { mostrarLogin('Usuario o contraseña incorrectos.'); return; }
+  const datos = await r.json();
+  guardarToken(datos.token);
+  $('login').hidden = true;
+  f.reset();
+  $('quien').innerHTML = `${datos.nombre || datos.usuario} · ${datos.rol}
+    <button id="salir" style="border:0;background:none;color:var(--text-accent);
+      cursor:pointer;font:inherit">Salir</button>`;
+  $('salir').onclick = async () => {
+    await api('/salir', {method: 'POST', body: '{}'}).catch(() => {});
+    guardarToken(null); location.reload();
+  };
+  cargar();
+});
+let filtro = 'todos';
+let indice = 0;
+
 
 function avisar(texto, error = false) {
   const el = $('aviso');
@@ -148,7 +227,7 @@ const visibles = () => pedidos.filter(p =>
 
 async function cargar() {
   try {
-    const r = await fetch(`${API}/bandeja`);
+    const r = await api('/bandeja');
     if (!r.ok) throw new Error(`El servidor respondió ${r.status}`);
     pedidos = await r.json();
   } catch (e) {
@@ -276,9 +355,8 @@ function detalleDe(p) {
 
 async function resolver(p, accion, corregido = false) {
   try {
-    const r = await fetch(`${API}/pedidos/${encodeURIComponent(p.folio)}/${accion}`, {
+    const r = await api(`/pedidos/${encodeURIComponent(p.folio)}/${accion}`, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(accion === 'aprobar' ? {corregido} : {motivo: 'rechazado en revisión'}),
     });
     const datos = await r.json();
@@ -323,9 +401,8 @@ $('lote').onclick = async () => {
   // dos primeros ya quedaron y el aviso dice exactamente cuántos pasaron.
   let ok = 0;
   for (const p of limpios) {
-    const r = await fetch(`${API}/pedidos/${encodeURIComponent(p.folio)}/aprobar`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({corregido: false}),
+    const r = await api(`/pedidos/${encodeURIComponent(p.folio)}/aprobar`, {
+      method: 'POST', body: JSON.stringify({corregido: false}),
     });
     if (r.ok) ok++;
   }
@@ -333,8 +410,21 @@ $('lote').onclick = async () => {
   await cargar();
 };
 
-cargar();
-setInterval(cargar, 15000);  // llegan pedidos mientras alguien revisa
+if (token) {
+  api('/yo').then(r => r.json()).then(d => {
+    $('quien').innerHTML = `${d.usuario} · ${d.rol}
+      <button id="salir" style="border:0;background:none;color:var(--text-accent);
+        cursor:pointer;font:inherit">Salir</button>`;
+    $('salir').onclick = async () => {
+      await api('/salir', {method: 'POST', body: '{}'}).catch(() => {});
+      guardarToken(null); location.reload();
+    };
+    cargar();
+  }).catch(() => {});
+} else {
+  mostrarLogin();
+}
+setInterval(() => { if (token) cargar(); }, 15000);  // llegan pedidos mientras alguien revisa
 </script>
 </body>
 </html>

@@ -61,12 +61,17 @@ class ERPSimulado(PuertoERP):
     # --- Escritura ---------------------------------------------------------
 
     def crear_pedido(self, pedido: dict, clave_idempotencia: str) -> ResultadoERP:
-        # Idempotencia: si ya se escribio este folio, se devuelve el mismo
-        # resultado en vez de duplicar. Un reintento por timeout no debe
-        # generar dos pedidos.
+        """Da de alta el pedido y GUARDA la clave con la que llego.
+
+        Antes esto no persistia nada y deducia la idempotencia de
+        pedidos.folio_erp — una columna del lado de aca que se llena despues de
+        que esta funcion retorna. Un ERP real no puede saber eso. Ahora guarda
+        su propio registro, igual que lo haria un ERP de verdad, para que
+        buscar_por_clave() pueda responder tras una caida.
+        """
         existente = db.uno(
-            "SELECT folio_erp FROM pedidos WHERE folio = ? AND folio_erp IS NOT NULL",
-            (clave_idempotencia,),
+            "SELECT folio_erp FROM erp_pedidos WHERE tenant = ? AND clave = ?",
+            (CFG.tenant, clave_idempotencia),
         )
         if existente:
             return ResultadoERP(
@@ -76,18 +81,35 @@ class ERPSimulado(PuertoERP):
             )
 
         folio_erp = f"OV-{uuid.uuid4().hex[:8].upper()}"
+        with db.tx() as cx:
+            cx.execute(
+                "INSERT INTO erp_pedidos (folio_erp, tenant, clave, cliente_id,"
+                " total, cuerpo, creado_en) VALUES (?,?,?,?,?,?,?)",
+                (folio_erp, CFG.tenant, clave_idempotencia, pedido.get("cliente_id"),
+                 pedido.get("total", 0),
+                 json.dumps(pedido, ensure_ascii=False, default=str), db.ahora()),
+            )
         return ResultadoERP(
             ok=True,
             folio_erp=folio_erp,
             mensaje=f"Pedido creado en {self.nombre}.",
-            datos={"eco": json.loads(json.dumps(pedido, default=str))},
+        )
+
+    def buscar_por_clave(self, clave_idempotencia: str) -> dict | None:
+        return db.uno(
+            "SELECT folio_erp, cliente_id, total, creado_en FROM erp_pedidos"
+            " WHERE tenant = ? AND clave = ?",
+            (CFG.tenant, clave_idempotencia),
         )
 
     def cancelar_pedido(self, folio_erp: str, motivo: str) -> ResultadoERP:
         return ResultadoERP(ok=True, folio_erp=folio_erp, mensaje=f"Cancelado: {motivo}")
 
     def consultar_pedido(self, folio_erp: str) -> dict | None:
-        return db.uno("SELECT * FROM pedidos WHERE folio_erp = ?", (folio_erp,))
+        return db.uno(
+            "SELECT * FROM erp_pedidos WHERE tenant = ? AND folio_erp = ?",
+            (CFG.tenant, folio_erp),
+        )
 
     def registrar_incidencia(self, incidencia: dict) -> ResultadoERP:
         return ResultadoERP(

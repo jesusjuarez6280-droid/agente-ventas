@@ -222,7 +222,9 @@ def salud_catalogo(limite: int = 50) -> list[dict]:
                COUNT(pa.partida_id) AS veces_pedido,
                COALESCE(SUM(pa.importe), 0) AS monto
         FROM productos p
-        LEFT JOIN partidas pa ON pa.sku = p.sku
+        -- El JOIN lleva tenant: sin el, a un cliente se le sumaban las
+        -- ventas de otro que vendiera el mismo SKU.
+        LEFT JOIN partidas pa ON pa.sku = p.sku AND pa.tenant = p.tenant
         WHERE p.tenant = ? AND p.activo = 1
         GROUP BY p.sku ORDER BY veces_pedido DESC LIMIT ?
         """,

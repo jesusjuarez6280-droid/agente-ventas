@@ -173,25 +173,30 @@ class Cerebro:
         for vuelta in range(MAX_VUELTAS):
             partes: list[str] = []
 
-            async with self.cliente.messages.stream(
-                model=CFG.modelo,
-                max_tokens=2048,
-                system=[
-                    {
-                        "type": "text",
-                        "text": self.sistema,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-                tools=herramientas.DEFINICIONES,
-                output_config={"effort": CFG.esfuerzo},
-                messages=self.mensajes,
-            ) as flujo:
-                async for evento in flujo.text_stream:
-                    partes.append(evento)
-                    await emitir(evento)
-
-                mensaje = await flujo.get_final_message()
+            try:
+                mensaje = await self._una_vuelta(partes, emitir)
+            except Exception as e:  # noqa: BLE001
+                # Un 429, una llave vencida o un timeout no pueden tirar la
+                # llamada. Antes la excepcion subia hasta el WebSocket y el
+                # cliente se quedaba con silencio y linea muerta; ahora se le
+                # dice algo y se pasa a una persona.
+                auditoria.registrar(
+                    self.sesion.conversacion_id, tipo="sistema",
+                    contenido=f"Fallo del modelo: {type(e).__name__}: {e}",
+                    offset_audio_ms=self.sesion.offset_audio_ms,
+                )
+                respuesta_final = (
+                    "Disculpe, se me trabo el sistema. Permitame lo comunico "
+                    "con una persona."
+                )
+                self.sesion.escalada = True
+                self.sesion.motivo_escalamiento = f"fallo tecnico: {type(e).__name__}"
+                if al_texto:
+                    try:
+                        await al_texto(respuesta_final)
+                    except Exception:
+                        pass  # si ni el canal responde, queda la traza
+                break
 
             texto_turno = "".join(partes).strip()
             if texto_turno:
@@ -244,6 +249,30 @@ class Cerebro:
             offset_audio_ms=self.sesion.offset_audio_ms,
         )
         return respuesta_final
+
+
+    async def _una_vuelta(self, partes: list[str], emitir):
+        """Una ida y vuelta al modelo. Separada para poder envolverla en try."""
+        async with self.cliente.messages.stream(
+            model=CFG.modelo,
+            max_tokens=2048,
+            system=[
+                {
+                    "type": "text",
+                    "text": self.sistema,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            tools=herramientas.DEFINICIONES,
+            output_config={"effort": CFG.esfuerzo},
+            messages=self.mensajes,
+        ) as flujo:
+            async for evento in flujo.text_stream:
+                partes.append(evento)
+                await emitir(evento)
+
+            mensaje = await flujo.get_final_message()
+        return mensaje
 
     async def _emitir_puente(
         self,

@@ -16,11 +16,12 @@ from __future__ import annotations
 import json
 import os
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from .. import auditoria, catalogo, db, inventario, metricas, pedidos
+from .. import auditoria, catalogo, db, inventario, metricas, pedidos, seguridad
 from ..config import CFG
 
 app = FastAPI(
@@ -29,15 +30,76 @@ app = FastAPI(
     version="0.2.0",
 )
 
-# El panel corre en otro puerto durante el desarrollo, asi que necesita CORS.
-# En produccion se restringe a los dominios propios via ORIGENES_PANEL.
-_origenes = os.getenv("ORIGENES_PANEL", "*").split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in _origenes],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS cerrado por defecto: el panel se sirve desde este mismo origen, asi que
+# no necesita ninguno. Con "*" y sin autenticacion, cualquier pagina que
+# visitara un revisor podia aprobar pedidos desde su navegador.
+# ORIGENES_PANEL solo hace falta para desarrollar el frontend en otro puerto.
+_origenes = [o.strip() for o in os.getenv("ORIGENES_PANEL", "").split(",") if o.strip()]
+# ---------------------------------------------------------------------------
+# Autenticacion
+#
+# Todo endpoint pasa por aqui. Aprobar un pedido lo escribe al ERP por decenas
+# de miles de pesos, y la bandeja expone nombres, telefonos y lineas de credito
+# de clientes: ninguna de las dos cosas puede quedar abierta al puerto.
+# ---------------------------------------------------------------------------
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+def sesion_actual(cred: HTTPAuthorizationCredentials | None = Depends(_bearer)) -> dict:
+    """Valida el token y devuelve la sesion. 401 si no sirve."""
+    sesion = seguridad.sesion_de(cred.credentials if cred else None)
+    if not sesion:
+        raise HTTPException(
+            401, "Sesion invalida o vencida.", headers={"WWW-Authenticate": "Bearer"}
+        )
+    return sesion
+
+
+def puede_aprobar(sesion: dict = Depends(sesion_actual)) -> dict:
+    """Solo el rol revisor mueve dinero. Consulta mira y no toca."""
+    if sesion["rol"] != "revisor":
+        raise HTTPException(
+            403, "Tu rol es de consulta; aprobar y rechazar requiere rol revisor."
+        )
+    return sesion
+
+
+class Credenciales(BaseModel):
+    usuario: str
+    password: str
+
+
+@app.post("/api/entrar", tags=["sesion"])
+def entrar(cuerpo: Credenciales) -> dict:
+    datos = seguridad.iniciar_sesion(cuerpo.usuario, cuerpo.password)
+    if not datos:
+        # Un solo mensaje para los dos casos: decir cual fallo le confirma a un
+        # atacante que usuarios existen.
+        raise HTTPException(401, "Usuario o contrasena incorrectos.")
+    return datos
+
+
+@app.post("/api/salir", tags=["sesion"])
+def salir(sesion: dict = Depends(sesion_actual)) -> dict:
+    seguridad.cerrar_sesion(sesion["token"])
+    return {"ok": True}
+
+
+@app.get("/api/yo", tags=["sesion"])
+def yo(sesion: dict = Depends(sesion_actual)) -> dict:
+    return {"usuario": sesion["usuario"], "rol": sesion["rol"],
+            "vence_en": sesion["vence_en"]}
+
+
+if _origenes:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origenes,
+        allow_credentials=True,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +155,8 @@ def _banderas(datos: dict, cab: dict) -> list[dict]:
 
 
 @app.get("/api/bandeja", tags=["bandeja"])
-def bandeja(estado: str = Query("por_aprobar")) -> list[dict]:
+def bandeja(estado: str = Query("por_aprobar"),
+            sesion: dict = Depends(sesion_actual)) -> list[dict]:
     """Pedidos esperando revision humana, con todo lo necesario para decidir."""
     filas = db.consultar(
         """
@@ -129,7 +192,8 @@ class Aprobacion(BaseModel):
 
 
 @app.post("/api/pedidos/{folio}/aprobar", tags=["bandeja"])
-def aprobar(folio: str, cuerpo: Aprobacion | None = None) -> dict:
+def aprobar(folio: str, cuerpo: Aprobacion | None = None,
+            sesion: dict = Depends(puede_aprobar)) -> dict:
     """Aprueba y escribe al ERP.
 
     `corregido` es importante: marca si la persona tuvo que arreglar algo antes
@@ -146,11 +210,16 @@ def aprobar(folio: str, cuerpo: Aprobacion | None = None) -> dict:
 
     corregido = bool(cuerpo and cuerpo.corregido)
     with db.tx() as cx:
-        cx.execute(
+        # El WHERE lleva el estado: entre la lectura de arriba y este UPDATE
+        # cabe otra peticion. Sin esta condicion, un rechazo simultaneo dejaba
+        # el pedido cancelado y aun asi se escribia al ERP.
+        cur = cx.execute(
             "UPDATE pedidos SET estado = 'confirmado', corregido_en_revision = ?,"
-            " actualizado_en = ? WHERE folio = ?",
+            " actualizado_en = ? WHERE folio = ? AND estado = 'por_aprobar'",
             (1 if corregido else 0, db.ahora(), folio),
         )
+        if cur.rowcount == 0:
+            raise HTTPException(409, "Alguien mas cambio este pedido; vuelve a cargarlo.")
     return pedidos.escribir_en_erp(folio)
 
 
@@ -159,7 +228,8 @@ class Rechazo(BaseModel):
 
 
 @app.post("/api/pedidos/{folio}/rechazar", tags=["bandeja"])
-def rechazar(folio: str, cuerpo: Rechazo | None = None) -> dict:
+def rechazar(folio: str, cuerpo: Rechazo | None = None,
+             sesion: dict = Depends(puede_aprobar)) -> dict:
     """Cancela el pedido y devuelve al piso el material apartado."""
     if not db.uno("SELECT 1 AS x FROM pedidos WHERE folio = ?", (folio,)):
         raise HTTPException(404, f"No existe el pedido {folio}.")
@@ -176,7 +246,8 @@ def rechazar(folio: str, cuerpo: Rechazo | None = None) -> dict:
 # ---------------------------------------------------------------------------
 
 @app.get("/api/conversaciones/{conversacion_id}", tags=["conversaciones"])
-def conversacion(conversacion_id: str) -> dict:
+def conversacion(conversacion_id: str,
+                 sesion: dict = Depends(sesion_actual)) -> dict:
     """Transcripcion completa con el pedido enlazado renglon por renglon.
 
     El campo `turno_id` de cada partida apunta al momento de la conversacion
@@ -220,7 +291,8 @@ def conversacion(conversacion_id: str) -> dict:
 
 
 @app.get("/api/conversaciones", tags=["conversaciones"])
-def lista_conversaciones(limite: int = Query(50, le=200)) -> list[dict]:
+def lista_conversaciones(limite: int = Query(50, le=200),
+                         sesion: dict = Depends(sesion_actual)) -> list[dict]:
     return db.consultar(
         """
         SELECT cv.*, c.nombre AS cliente_nombre,
@@ -239,7 +311,8 @@ def lista_conversaciones(limite: int = Query(50, le=200)) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 @app.get("/api/metricas", tags=["tablero"])
-def tablero(periodo: str = Query("hoy", pattern="^(hoy|semana|mes|trimestre)$")) -> dict:
+def tablero(periodo: str = Query("hoy", pattern="^(hoy|semana|mes|trimestre)$"),
+            sesion: dict = Depends(sesion_actual)) -> dict:
     """Todo el tablero en una sola llamada."""
     return metricas.tablero(periodo)
 
@@ -249,7 +322,7 @@ def tablero(periodo: str = Query("hoy", pattern="^(hoy|semana|mes|trimestre)$"))
 # ---------------------------------------------------------------------------
 
 @app.get("/api/catalogo/salud", tags=["catalogo"])
-def salud_catalogo() -> list[dict]:
+def salud_catalogo(sesion: dict = Depends(sesion_actual)) -> list[dict]:
     return metricas.salud_catalogo()
 
 
@@ -259,7 +332,8 @@ class NuevoAlias(BaseModel):
 
 
 @app.post("/api/catalogo/alias", tags=["catalogo"])
-def agregar_alias(cuerpo: NuevoAlias) -> dict:
+def agregar_alias(cuerpo: NuevoAlias,
+                  sesion: dict = Depends(puede_aprobar)) -> dict:
     """Ensena al catalogo una forma nueva de pedir un producto.
 
     Es el ciclo de mejora cerrado: el agente no entendio un termino, quedo
@@ -297,7 +371,7 @@ def agregar_alias(cuerpo: NuevoAlias) -> dict:
 # ---------------------------------------------------------------------------
 
 @app.get("/api/inventario", tags=["inventario"])
-def ver_inventario() -> list[dict]:
+def ver_inventario(sesion: dict = Depends(sesion_actual)) -> list[dict]:
     """Existencias con lo apartado y lo que viene en camino."""
     filas = db.consultar(
         """

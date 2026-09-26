@@ -67,6 +67,19 @@ class PuertoERP(ABC):
     def registrar_incidencia(self, incidencia: dict) -> ResultadoERP:
         """Queja, aclaracion o seguimiento en el ERP o CRM del cliente."""
 
+    def buscar_por_clave(self, clave_idempotencia: str) -> dict | None:
+        """Busca un pedido por la clave con que se mando, no por el folio del ERP.
+
+        Es la salida del caso peor: se llamo a crear_pedido, el ERP lo creo, y
+        el proceso murio antes de guardar el folio de vuelta. Al reintentar hay
+        que poder preguntar "¿esto ya lo tienes?" en vez de escribir otra vez.
+
+        Un ERP que no pueda buscar por clave devuelve None, y entonces el
+        reintento arriesga duplicar: conviene guardar la clave en un campo de
+        referencia del pedido para poder consultarla.
+        """
+        return None
+
     # --- Salud -------------------------------------------------------------
 
     def esta_disponible(self) -> bool:

@@ -233,36 +233,13 @@ async def salud() -> dict:
     }
 
 
-# --------------------------------------------------------------------------
-# Bandeja de aprobacion. Es la pieza que hace viable arrancar: la IA propone,
-# una persona confirma con un clic, y se mide el acierto antes de soltarle la
-# escritura automatica al ERP.
-# --------------------------------------------------------------------------
-
-@app.get("/pedidos/por-aprobar")
-async def por_aprobar() -> list[dict]:
-    filas = db.consultar(
-        "SELECT folio, cliente_id, canal, total, creado_en, conversacion_id"
-        " FROM pedidos WHERE tenant = ? AND estado = 'por_aprobar'"
-        " ORDER BY creado_en DESC",
-        (CFG.tenant,),
-    )
-    for f in filas:
-        f["partidas"] = pedidos.resumen(f["folio"])["partidas"]
-    return filas
-
-
-@app.post("/pedidos/{folio}/aprobar")
-async def aprobar(folio: str) -> dict:
-    with db.tx() as cx:
-        cx.execute(
-            "UPDATE pedidos SET estado = 'confirmado', actualizado_en = ?"
-            " WHERE folio = ? AND estado = 'por_aprobar'",
-            (db.ahora(), folio),
-        )
-    return pedidos.escribir_en_erp(folio)
-
-
-@app.post("/pedidos/{folio}/rechazar")
-async def rechazar(folio: str, motivo: str = Form(default="rechazado en revision")) -> dict:
-    return pedidos.cancelar(folio, motivo)
+# ---------------------------------------------------------------------------
+# Aqui NO viven la bandeja ni la aprobacion, a proposito.
+#
+# Este proceso escucha en el puerto que Twilio alcanza desde internet. Tener en
+# el mismo `app` endpoints que listan pedidos con datos de cliente y que los
+# escriben al ERP significaba que cualquiera con la URL podia aprobarlos sin
+# pasar por ningun humano — justo lo que la aprobacion humana debia impedir.
+#
+# La bandeja vive en canales/panel.py, detras de autenticacion y roles.
+# ---------------------------------------------------------------------------
