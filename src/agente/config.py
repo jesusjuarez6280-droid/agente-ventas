@@ -32,10 +32,21 @@ class Config:
 
     modelo: str = os.getenv("MODELO_AGENTE", "claude-opus-5")
 
-    # Modelos de Gemini. Verificar los nombres vigentes en aistudio.google.com:
-    # el catalogo de Google cambia seguido.
-    modelo_gemini: str = os.getenv("MODELO_GEMINI", "gemini-3.5-flash")
-    modelo_puente_gemini: str = os.getenv("MODELO_PUENTE_GEMINI", "gemini-3.5-flash-lite")
+    # Modelos de Gemini. Los nombres cambian seguido: scripts/probar_gemini.py
+    # consulta cuales acepta la llave en vez de adivinarlos.
+    #
+    # Medido el 2026-09-26 con un turno con herramientas:
+    #     gemini-flash-lite-latest      798 ms
+    #     gemini-3.5-flash-lite       1,021 ms   <- el que se usa
+    #     gemini-3.1-flash-lite       1,137 ms
+    #     gemini-3.8-flash            1,385 ms   mas capaz, si hace falta
+    #     gemini-3.5-flash           20,059 ms   inservible para voz
+    #
+    # Los "flash" grandes razonan antes de contestar, y ese razonamiento se
+    # paga en silencio telefonico. Para tomar un pedido con herramientas, un
+    # flash-lite alcanza de sobra.
+    modelo_gemini: str = os.getenv("MODELO_GEMINI", "gemini-3.5-flash-lite")
+    modelo_puente_gemini: str = os.getenv("MODELO_PUENTE_GEMINI", "gemini-flash-lite-latest")
 
     # Carril rapido: el modelo que solo emite la frase-puente mientras el
     # grande trabaja. Corre EN PARALELO, nunca en cadena. No tiene
