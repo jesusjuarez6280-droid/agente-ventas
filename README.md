@@ -1,10 +1,86 @@
-# Agente de atención telefónica conectado a inventario
+# Agente de ventas por teléfono
 
-Contesta llamadas, entiende el pedido como lo dice el cliente, verifica contra
-inventario real, arma el pedido y lo deja registrado en el ERP.
+Contesta la llamada, entiende el pedido como lo dice el cliente, lo verifica
+contra el inventario real y lo registra en el ERP.
 
-El mismo cerebro atiende voz, WhatsApp y texto. Cambiar de giro es cambiar un
-archivo de configuración. Cambiar de ERP es escribir un adaptador.
+```
+CLIENTE  Que tal, necesito cuarenta bultos de harina refinada.
+AGENTE   Anotado: 2,000 kg (1 tarima) de harina de trigo refinada
+         a $18.50/kg = $37,000.00. ¿Algo más?
+
+CLIENTE  También mándame quinientos kilos de azúcar refinada.
+AGENTE   De azúcar refinada nada más tengo 150 kg. La estándar cubre
+         la cantidad completa hoy, y usted ya la ha comprado antes.
+         ¿Le sirve?
+
+CLIENTE  Va, mándame de la estándar entonces.
+AGENTE   Anotado: 500 kg (10 bultos) de azúcar estándar...
+```
+
+## Pruébalo en un minuto, sin pagar nada
+
+```bash
+pip install -r requirements.txt && python scripts/init_db.py --reset
+```
+
+```bash
+python scripts/demo_sin_api.py
+```
+
+Eso corre la llamada completa: reconoce quién marca, entiende *"cuarenta bultos
+de la de siempre"*, se niega a prometer material que no hay, ofrece la
+alternativa que ese cliente ya compra, arma el pedido y deja traza. **Sin llave
+de API, sin cuenta, sin costo.**
+
+Y el núcleo entero, verificado:
+
+```bash
+python scripts/probar_nucleo.py
+```
+
+## Los problemas que resuelve
+
+Lo difícil de esto no es que la IA hable. Es otra cosa:
+
+**Traducir cómo habla el cliente a tu catálogo.** Nadie dice *"SKU HAR-TRG-REF,
+500 kilogramos"*. Dicen *"mándame 20 bultos de la de siempre"*. La búsqueda va
+en cascada — SKU, alias registrado, todos los términos, similitud difusa — y si
+dos productos empatan, **pregunta en vez de adivinar**. Los términos que no
+entiende quedan anotados para que alguien los enseñe; la siguiente llamada ya
+los reconoce.
+
+**Que el modelo no invente.** El LLM solo hace tres cosas: entender, llamar
+herramientas y hablar. Cada existencia, precio y fecha sale de una consulta
+determinista. Si la herramienta falla, dice *"déjeme confirmarlo"* — no adivina.
+
+**Que el ERP no se ensucie.** El pedido se arma como borrador local y se escribe
+al ERP hasta el final, de forma idempotente y tras revalidar el material. Si la
+llamada se cae o el modelo se equivoca, el ERP nunca se enteró.
+
+**Que suene a persona.** Un segundo de silencio se siente a robot. Se resuelve
+con precarga por número entrante, una frase de acuse que se dice *mientras* se
+consulta, y streaming al sintetizador.
+
+## Lo que hay dentro
+
+| | |
+|---|---|
+| **Tres cerebros intercambiables** | Claude, Gemini y uno de reglas sin costo. Mismo contrato, una variable de entorno |
+| **Adaptadores de ERP** | Ocho operaciones. SAP, Odoo, Contpaqi o SQL directo se enchufan sin tocar el motor |
+| **Paquetes de giro** | Un YAML por ramo. Cambiar de granos a ferretería es configuración, no código |
+| **Panel web** | Bandeja de aprobación operable con teclado, con autenticación y roles |
+| **Trazabilidad de origen** | Cada renglón del pedido sabe qué frase lo originó y en qué segundo del audio |
+| **Auditado** | Una auditoría externa encontró 15 hallazgos; los críticos están corregidos con pruebas que los reproducen |
+
+## Estado
+
+Funcionando y verificado: catálogo, inventario con reservas que vencen, pedidos,
+idempotencia, métricas, panel con autenticación, y los tres proveedores.
+
+Sin cerrar todavía: dinero en `float` en vez de `Decimal`, verificación de que lo
+que el modelo *dice* coincide con lo que las herramientas devolvieron, y firma de
+los webhooks de telefonía. Están documentados en
+[docs/prompt-auditoria.md](docs/prompt-auditoria.md).
 
 ---
 
