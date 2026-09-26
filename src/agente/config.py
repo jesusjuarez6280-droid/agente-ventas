@@ -25,7 +25,17 @@ class Config:
     tenant: str = os.getenv("TENANT", "demo")
     giro: str = os.getenv("GIRO", "granos")
 
+    # Quien pone la inteligencia: claude | gemini | demo.
+    # El resto del sistema no se entera: catalogo, inventario, pedido y traza
+    # son identicos con cualquiera.
+    proveedor: str = os.getenv("PROVEEDOR", "claude").lower()
+
     modelo: str = os.getenv("MODELO_AGENTE", "claude-opus-5")
+
+    # Modelos de Gemini. Verificar los nombres vigentes en aistudio.google.com:
+    # el catalogo de Google cambia seguido.
+    modelo_gemini: str = os.getenv("MODELO_GEMINI", "gemini-3.5-flash")
+    modelo_puente_gemini: str = os.getenv("MODELO_PUENTE_GEMINI", "gemini-3.5-flash-lite")
 
     # Carril rapido: el modelo que solo emite la frase-puente mientras el
     # grande trabaja. Corre EN PARALELO, nunca en cadena. No tiene

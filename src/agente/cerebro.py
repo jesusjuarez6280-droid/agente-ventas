@@ -309,13 +309,24 @@ class Cerebro:
 def crear_cerebro(sesion, cliente=None):
     """Devuelve el cerebro que toque segun la configuracion.
 
-    Los canales llaman a esta funcion y no saben cual les toco. Cambiar de
-    modo demostracion a modelo real es una variable de entorno, no un cambio
-    de codigo — y que ambos cumplan el mismo contrato es la prueba de que la
-    conversacion esta desacoplada del resto del sistema.
+    Los canales llaman aqui y no saben cual les toco. Cambiar de proveedor —o
+    pasar a modo demostracion— es una variable de entorno, no un cambio de
+    codigo. Que las tres implementaciones cumplan el mismo contrato es la
+    prueba de que la conversacion esta desacoplada del resto del sistema.
     """
     if CFG.modo_demo:
         from .cerebro_demo import CerebroDemo
 
         return CerebroDemo(sesion)
+
+    if CFG.proveedor == "gemini":
+        from .cerebro_gemini import CerebroGemini
+
+        return CerebroGemini(sesion, cliente)
+
+    if CFG.proveedor not in ("claude", "anthropic"):
+        raise ValueError(
+            f"PROVEEDOR '{CFG.proveedor}' no reconocido. Usa: claude, gemini o demo."
+        )
+
     return Cerebro(sesion, cliente)

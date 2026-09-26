@@ -219,6 +219,37 @@ empiece a hablar.
 
 ---
 
+## Cambiar de proveedor de modelo
+
+Un solo archivo habla con el modelo, asi que el proveedor es una variable de
+entorno:
+
+```bash
+PROVEEDOR=claude   # claude | gemini | demo
+```
+
+| Proveedor | Archivo | Cuando |
+|---|---|---|
+| `claude` | `cerebro.py` | Opus 5 + Haiku 4.5 de puente. El de produccion |
+| `gemini` | `cerebro_gemini.py` | Gemini Flash. Mas barato, tiene tier gratis |
+| `demo` | `cerebro_demo.py` | Reglas, sin modelo. Costo cero |
+
+Las tres implementaciones cumplen el mismo contrato (`responder`, `saludo`,
+`texto_relleno`) y usan **las mismas 9 herramientas**: `cerebro_gemini.py`
+traduce `herramientas.DEFINICIONES` al formato de Gemini en vez de mantener una
+segunda copia, para que los proveedores no se desincronicen.
+
+### Sobre el tier gratis de Gemini
+
+Sirve para desarrollar, **no para demostrar ni para produccion**:
+
+- Los modelos Flash buenos dan ~20 peticiones al dia. Una llamada de 8 turnos
+  consume 16. Alcanza para **una llamada diaria**.
+- Flash-Lite da 500/dia (~30 llamadas) pero es el modelo mas chico.
+- **El tier gratis usa los datos para entrenar.** Con nombres, telefonos,
+  creditos y pedidos de clientes reales, eso no es opcion. Para datos de
+  clientes hay que estar en el tier de paga.
+
 ## Panel de control
 
 La API que consume la interfaz web:
