@@ -8,3 +8,4 @@ venv/
 
 # Documentos de producto reales, no forman parte del proyecto
 Productos/
+docs/codigo-completo.txt
