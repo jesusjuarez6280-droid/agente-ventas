@@ -219,6 +219,44 @@ empiece a hablar.
 
 ---
 
+## Panel de control
+
+La API que consume la interfaz web:
+
+```bash
+uvicorn agente.canales.panel:app --port 8080 --reload
+```
+
+| Endpoint | Devuelve |
+|---|---|
+| `GET /api/bandeja` | Pedidos por aprobar con partidas, credito y banderas de riesgo |
+| `POST /api/pedidos/{folio}/aprobar` | Aprueba y escribe al ERP |
+| `POST /api/pedidos/{folio}/rechazar` | Cancela y libera reservas |
+| `GET /api/conversaciones/{id}` | Transcripcion con cada partida enlazada a su frase |
+| `GET /api/metricas?periodo=hoy` | Todo el tablero en una llamada |
+| `GET /api/catalogo/salud` | Productos y que tan bien se entienden |
+| `POST /api/catalogo/alias` | Ensena un termino nuevo al catalogo |
+| `GET /api/inventario` | Existencias, apartados y entradas programadas |
+
+Documentacion viva en `http://localhost:8080/docs`.
+
+El prompt para la IA de diseno esta en [docs/prompt-diseno.md](docs/prompt-diseno.md).
+
+### Las metricas que importan
+
+**Tasa de acierto** — porcentaje de pedidos aprobados sin correccion. Es la que
+decide cuando se le suelta al agente la escritura automatica al ERP. Umbral: 95%
+con al menos 30 pedidos revisados.
+
+**Venta en riesgo** — lo que los clientes pidieron y no habia, valuado en pesos.
+Sale de la traza, sin instrumentar nada aparte. Es el argumento de compra mas
+fuerte del producto: le pone precio a un problema que la empresa ya tenia y no
+medía.
+
+**Lo que no se entendio** — terminos que el catalogo no reconocio, con un boton
+para asignarlos. El ciclo se cierra solo: no entendio, quedo anotado, alguien lo
+asigno, la siguiente llamada ya lo entiende.
+
 ## Conectar un ERP real
 
 Se implementa [`PuertoERP`](src/agente/erp/puerto.py) — ocho operaciones — y se

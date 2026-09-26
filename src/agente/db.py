@@ -41,8 +41,28 @@ def tx() -> Iterator[sqlite3.Connection]:
 
 
 def crear_esquema() -> None:
+    """Aplica el esquema. Las sentencias ALTER se saltan si ya se aplicaron.
+
+    executescript() aborta el archivo completo al primer error, y un ALTER
+    sobre una columna existente es un error. Por eso las migraciones van
+    sueltas y toleran el duplicado.
+    """
+    base, migraciones = [], []
+    for linea in _ESQUEMA.read_text(encoding="utf-8").splitlines():
+        if linea.strip().upper().startswith("ALTER"):
+            migraciones.append(linea.strip().rstrip(";"))
+        else:
+            base.append(linea)
+
     with tx() as cx:
-        cx.executescript(_ESQUEMA.read_text(encoding="utf-8"))
+        # El resto va entero a executescript, que si entiende comentarios.
+        cx.executescript("\n".join(base))
+        for migracion in migraciones:
+            try:
+                cx.execute(migracion)
+            except sqlite3.OperationalError as e:
+                if "duplicate column" not in str(e).lower():
+                    raise
 
 
 def consultar(sql: str, params: tuple = ()) -> list[dict[str, Any]]:

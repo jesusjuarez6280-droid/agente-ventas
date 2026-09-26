@@ -175,3 +175,8 @@ CREATE TABLE IF NOT EXISTS reposiciones (
     referencia      TEXT
 );
 CREATE INDEX IF NOT EXISTS ix_repo_sku ON reposiciones (tenant, sku, fecha_estimada);
+
+-- Marca si una persona tuvo que corregir el pedido antes de aprobarlo. De aqui
+-- sale la tasa de acierto, que es la metrica que decide cuando se le suelta al
+-- agente la escritura automatica al ERP.
+ALTER TABLE pedidos ADD COLUMN corregido_en_revision INTEGER NOT NULL DEFAULT 0;

@@ -24,6 +24,7 @@ Se activa con MODO_DEMO=true en el .env.
 from __future__ import annotations
 
 import re
+import time
 import unicodedata
 from typing import Awaitable, Callable
 
@@ -123,6 +124,7 @@ class CerebroDemo:
         self.cantidad_pendiente: float | None = None
         self.unidad_pendiente: str | None = None
         self.opciones_pendientes: list[dict] = []
+        self._inicio_turno = time.perf_counter()
 
     # -- utilidades ---------------------------------------------------------
 
@@ -132,7 +134,13 @@ class CerebroDemo:
     async def _decir(self, texto: str, al_texto) -> str:
         if al_texto:
             await al_texto(texto)
-        auditoria.registrar(self.sesion.conversacion_id, tipo="agente", contenido=texto)
+        auditoria.registrar(
+            self.sesion.conversacion_id, tipo="agente", contenido=texto,
+            # Se mide igual que en el cerebro real para que el tablero tenga
+            # numeros durante una demostracion, no un cero.
+            latencia_ms=int((time.perf_counter() - self._inicio_turno) * 1000),
+            offset_audio_ms=self.sesion.offset_audio_ms,
+        )
         return texto
 
     # -- turno --------------------------------------------------------------
@@ -143,6 +151,7 @@ class CerebroDemo:
         al_texto: Callable[[str], Awaitable[None]] | None = None,
         al_usar_herramienta: Callable[[str], Awaitable[None]] | None = None,
     ) -> str:
+        self._inicio_turno = time.perf_counter()
         turno_id = auditoria.registrar(
             self.sesion.conversacion_id, tipo="cliente", contenido=texto_cliente,
             offset_audio_ms=self.sesion.offset_audio_ms,
