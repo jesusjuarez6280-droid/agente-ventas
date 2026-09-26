@@ -1,0 +1,20 @@
+:root{
+  /* Custom curves. CSS built-ins are too weak to read as intentional. */
+  --ease-out:cubic-bezier(.23,1,.32,1);/* @kind other */
+  --ease-in-out:cubic-bezier(.77,0,.175,1);/* @kind other */
+  --ease-drawer:cubic-bezier(.32,.72,0,1);/* @kind other */
+  --ease-hover:cubic-bezier(.4,0,.2,1);/* @kind other */
+  --ease-linear:linear;/* @kind other */
+
+  /* Durations. UI stays under 300ms. */
+  --dur-press:120ms;/* @kind other */
+  --dur-hover:160ms;/* @kind other */
+  --dur-tooltip:150ms;/* @kind other */
+  --dur-dropdown:200ms;/* @kind other */
+  --dur-overlay:260ms;/* @kind other */
+  --dur-drawer:400ms;/* @kind other */
+
+  --press-scale:.97;/* @kind other */
+  --enter-scale:.95;/* @kind other */
+  --stagger-step:45ms;/* @kind other */
+}

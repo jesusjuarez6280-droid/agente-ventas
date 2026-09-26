@@ -1,0 +1,73 @@
+:root{
+  /* Accent — cobalt. One accent, saturation kept under 80%. */
+  --cobalt-50:#EEF1FC;--cobalt-100:#DDE4F9;--cobalt-200:#B9C6F1;--cobalt-300:#8FA3E6;
+  --cobalt-400:#5B75DA;--cobalt-500:#2F4FD1;--cobalt-600:#2740A8;--cobalt-700:#1D3080;
+  --cobalt-800:#152257;--cobalt-900:#0E1738;
+
+  /* Neutral warm — cream */
+  --cream-50:#FBF9F4;--cream-100:#F4F1E8;--cream-200:#EAE5D8;--cream-300:#D8D2C2;
+  --cream-400:#B9B2A0;
+
+  /* Neutral cool — ink */
+  --ink-100:#C3C8D1;--ink-200:#98A0AC;--ink-300:#6E7682;--ink-400:#4B515C;
+  --ink-500:#363B44;--ink-600:#262A31;--ink-700:#1A1D22;--ink-800:#131519;--ink-900:#0C0E11;
+
+  /* Semantic hues — desaturated so they sit beside cobalt without competing */
+  --green-500:#2E7D5B;--green-100:#DDEEE5;
+  --amber-500:#A8730F;--amber-100:#F5E9D2;
+  --red-500:#B23B2E;--red-100:#F6DFDB;
+
+  /* Aliases — light (default) */
+  --surface-page:var(--cream-50);
+  --surface-card:#FFFFFF;
+  --surface-sunken:var(--cream-100);
+  --surface-inverse:var(--ink-900);
+  --surface-accent:var(--cobalt-500);
+  --surface-accent-soft:var(--cobalt-50);
+  --surface-hover:var(--cream-100);
+  --surface-active:var(--cream-200);
+
+  --text-strong:var(--ink-900);
+  --text-body:var(--ink-600);
+  --text-muted:var(--ink-300);
+  --text-inverse:var(--cream-50);
+  --text-accent:var(--cobalt-600);
+  --text-on-accent:#FFFFFF;
+
+  --border-subtle:var(--cream-200);
+  --border-default:var(--cream-300);
+  --border-strong:var(--ink-200);
+  --border-accent:var(--cobalt-500);
+
+  --focus-ring:var(--cobalt-400);
+
+  --status-success:var(--green-500);--status-success-soft:var(--green-100);
+  --status-warning:var(--amber-500);--status-warning-soft:var(--amber-100);
+  --status-danger:var(--red-500);--status-danger-soft:var(--red-100);
+  --status-info:var(--cobalt-500);--status-info-soft:var(--cobalt-50);
+}
+[data-theme="dark"]{
+  --surface-page:var(--ink-900);
+  --surface-card:var(--ink-800);
+  --surface-sunken:#090A0C;
+  --surface-inverse:var(--cream-50);
+  --surface-accent:var(--cobalt-400);
+  --surface-accent-soft:var(--cobalt-900);
+  --surface-hover:var(--ink-700);
+  --surface-active:var(--ink-600);
+
+  --text-strong:var(--cream-50);
+  --text-body:var(--ink-100);
+  --text-muted:var(--ink-200);
+  --text-inverse:var(--ink-900);
+  --text-accent:var(--cobalt-300);
+  --text-on-accent:#0C0E11;
+
+  --border-subtle:var(--ink-600);
+  --border-default:var(--ink-500);
+  --border-strong:var(--ink-400);
+  --border-accent:var(--cobalt-400);
+
+  --focus-ring:var(--cobalt-300);
+  --status-success-soft:#12301F;--status-warning-soft:#31220A;--status-danger-soft:#361511;--status-info-soft:var(--cobalt-900);
+}

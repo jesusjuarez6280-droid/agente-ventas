@@ -331,3 +331,36 @@ def salud() -> dict:
         "modo_demo": CFG.modo_demo,
         "pedidos_por_aprobar": pendientes["n"] if pendientes else 0,
     }
+
+
+# ---------------------------------------------------------------------------
+# Interfaz web
+#
+# El panel que entrego diseno vive en panel/ y se sirve desde aqui, en el mismo
+# origen que la API. Asi no hay CORS que configurar en produccion y el frontend
+# puede pegarle a /api/... con rutas relativas.
+# ---------------------------------------------------------------------------
+
+from pathlib import Path  # noqa: E402
+
+from fastapi.responses import FileResponse, RedirectResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+_PANEL = Path(__file__).resolve().parents[3] / "panel"
+
+if _PANEL.is_dir():
+
+    @app.get("/", include_in_schema=False)
+    def raiz():
+        return RedirectResponse("/panel/Bandeja.dc.html")
+
+    @app.get("/panel/{archivo:path}", include_in_schema=False)
+    def servir_panel(archivo: str):
+        # Se resuelve y se comprueba que caiga dentro de panel/: sin esto, un
+        # '../..' en la ruta serviria cualquier archivo de la maquina.
+        destino = (_PANEL / archivo).resolve()
+        if not destino.is_file() or _PANEL not in destino.parents:
+            raise HTTPException(404, f"No existe {archivo}")
+        return FileResponse(destino)
+
+    app.mount("/ds", StaticFiles(directory=_PANEL / "ds"), name="ds")

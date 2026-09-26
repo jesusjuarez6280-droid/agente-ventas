@@ -1,0 +1,19 @@
+:root{
+  /* Shadows are cool-tinted and low-spread. Nothing floats more than it has to. */
+  --shadow-none:none;
+  --shadow-hairline:0 0 0 1px color-mix(in srgb,var(--ink-900) 8%,transparent);
+  --shadow-raised:0 1px 2px rgba(12,14,17,.06),0 0 0 1px rgba(12,14,17,.05);
+  --shadow-overlay:0 8px 24px -8px rgba(12,14,17,.18),0 2px 6px rgba(12,14,17,.06),0 0 0 1px rgba(12,14,17,.06);
+  --shadow-modal:0 28px 64px -16px rgba(12,14,17,.30),0 0 0 1px rgba(12,14,17,.08);
+  --shadow-inset-control:inset 0 1px 0 rgba(255,255,255,.5);
+  --ring-focus:0 0 0 2px var(--surface-page),0 0 0 4px var(--focus-ring);
+  --blur-overlay:blur(8px) saturate(140%);/* @kind other */
+  --scrim:rgba(12,14,17,.42);/* @kind color */
+}
+[data-theme="dark"]{
+  --shadow-raised:0 1px 2px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.06);
+  --shadow-overlay:0 8px 24px -8px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);
+  --shadow-modal:0 28px 64px -16px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.09);
+  --shadow-inset-control:inset 0 1px 0 rgba(255,255,255,.06);
+  --scrim:rgba(0,0,0,.6);/* @kind color */
+}

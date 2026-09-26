@@ -1,0 +1,12 @@
+:root{
+  /* 4px base, with two half-steps for optical corrections */
+  --space-0:0px;--space-1:2px;--space-2:4px;--space-3:6px;--space-4:8px;
+  --space-5:12px;--space-6:16px;--space-7:20px;--space-8:24px;--space-9:32px;
+  --space-10:40px;--space-11:56px;--space-12:72px;--space-13:96px;--space-14:128px;
+
+  --gutter-inline:clamp(20px,5vw,72px);/* @kind spacing */
+  --section-y:clamp(64px,9vw,128px);/* @kind spacing */
+  --measure-prose:62ch;/* @kind spacing */
+  --measure-narrow:44ch;/* @kind spacing */
+  --width-content:1180px;/* @kind spacing */
+}

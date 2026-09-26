@@ -1,0 +1,9 @@
+/* Webfonts.
+   Satoshi (drawn direction) is not open-licensed, so the shipped stack substitutes
+   Plus Jakarta Sans — the closest free geometric grotesque. Swap in Satoshi .woff2
+   files here when licensed copies are available. Mono: JetBrains Mono. */
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500&display=swap");
+/* Phosphor Icons — the single icon family. Regular, bold and fill weights. */
+@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css");
+@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css");
+@import url("https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css");

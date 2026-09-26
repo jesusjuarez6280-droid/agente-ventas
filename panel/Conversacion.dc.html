@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;height:100%;min-height:0;background:var(--surface-page)">
+  <header style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4) var(--space-6);padding:var(--space-5) var(--space-7);border-bottom:1px solid var(--border-subtle);background:var(--surface-card)">
+    <button onClick="{{ volver }}" style="height:30px;display:flex;align-items:center;gap:8px;padding:0 10px 0 6px;border:0;border-radius:var(--radius-control);background:transparent;color:var(--text-body);font:var(--text-label);cursor:pointer" style-hover="background:var(--surface-hover)"><i class="ph ph-arrow-left"></i>Bandeja<span style="font:500 11px/1 var(--font-mono);padding:2px 5px;border-radius:3px;border:1px solid var(--border-default);color:var(--text-muted)">Esc</span></button>
+    <div style="width:1px;height:28px;background:var(--border-subtle)"></div>
+    <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 280px">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px">
+        <h1 style="font:var(--text-h4);color:var(--text-strong);margin:0">{{ h.razon }}</h1>
+        <span style="font:500 12px/1 var(--font-mono);color:var(--text-muted)">{{ h.folio }}</span>
+        <span style="display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:var(--radius-sm);white-space:nowrap;font:600 11.5px/1 var(--font-sans);background:{{ h.estadoBg }};color:{{ h.estadoFg }}">{{ h.estado }}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px 14px;font:var(--text-caption);color:var(--text-muted);font-variant-numeric:tabular-nums">
+        <span style="display:flex;align-items:center;gap:5px"><i class="{{ h.canalIcono }}"></i>{{ h.canal }} · {{ h.telefono }}</span>
+        <span>Inició {{ h.hora }} · duró {{ h.duracion }}</span>
+        <span>{{ h.consultas }}</span>
+      </div>
+    </div>
+    <sc-if value="{{ pendiente }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;gap:8px">
+        <button onClick="{{ aprobar }}" style="height:34px;display:flex;align-items:center;gap:8px;padding:0 14px;border:0;border-radius:var(--radius-control);background:var(--surface-accent);color:var(--text-on-accent);font:600 13px/1 var(--font-sans);cursor:pointer"><i class="ph-bold ph-check"></i>Aprobar<span style="font:500 11px/1 var(--font-mono);padding:2px 5px;border-radius:3px;background:rgba(255,255,255,.2)">A</span></button>
+        <button onClick="{{ rechazar }}" style="height:34px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--border-default);border-radius:var(--radius-control);background:var(--surface-card);color:var(--status-danger);font:600 13px/1 var(--font-sans);cursor:pointer"><i class="ph-bold ph-x"></i>Rechazar<span style="font:500 11px/1 var(--font-mono);padding:2px 5px;border-radius:3px;background:var(--surface-sunken);color:var(--text-muted)">R</span></button>
+      </div>
+    </sc-if>
+  </header>
+
+  <sc-if value="{{ esVoz }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:flex;align-items:center;gap:var(--space-5);padding:var(--space-4) var(--space-7) var(--space-5);border-bottom:1px solid var(--border-subtle);background:var(--surface-card)">
+      <button onClick="{{ alternar }}" title="Reproducir / pausar (espacio)" style="flex:none;width:36px;height:36px;display:grid;place-items:center;border:0;border-radius:50%;background:var(--surface-accent);color:var(--text-on-accent);cursor:pointer"><i class="{{ iconoPlay }}" style="font-size:16px"></i></button>
+      <span style="flex:none;white-space:nowrap;font:500 12.5px/1 var(--font-mono);color:var(--text-body);min-width:96px">{{ tiempo }}</span>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+        <div style="position:relative;height:18px">
+          <sc-for list="{{ marcas }}" as="m" hint-placeholder-count="3">
+            <button onClick="{{ m.ir }}" onMouseEnter="{{ m.entra }}" onMouseLeave="{{ m.sale }}" title="{{ m.titulo }}" style="position:absolute;left:{{ m.left }};top:0;transform:translateX(-50%);min-width:18px;height:18px;padding:0 4px;border-radius:3px;border:1px solid {{ m.borde }};background:{{ m.bg }};color:{{ m.fg }};font:600 10.5px/16px var(--font-sans);cursor:pointer;z-index:{{ m.z }}">{{ m.n }}</button>
+          </sc-for>
+        </div>
+        <div ref="{{ ondaRef }}" onClick="{{ buscar }}" style="position:relative;height:36px;display:flex;align-items:center;gap:1px;cursor:pointer">
+          <sc-for list="{{ barras }}" as="b" hint-placeholder-count="60">
+            <div style="flex:1;min-width:1px;height:{{ b.h }};border-radius:1px;background:{{ b.c }}"></div>
+          </sc-for>
+          <sc-for list="{{ marcas }}" as="m" hint-placeholder-count="3">
+            <div style="position:absolute;left:{{ m.left }};top:-3px;bottom:-3px;width:1px;background:{{ m.linea }};pointer-events:none"></div>
+          </sc-for>
+          <div style="position:absolute;left:{{ cabezal }};top:-4px;bottom:-4px;width:2px;background:var(--text-strong);pointer-events:none"></div>
+        </div>
+      </div>
+      <button onClick="{{ cambiarVel }}" style="flex:none;height:28px;padding:0 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--surface-card);color:var(--text-body);font:500 12px/1 var(--font-mono);cursor:pointer">{{ vel }}</button>
+    </div>
+  </sc-if>
+
+  <div style="flex:1;min-height:0;display:flex;flex-wrap:wrap;overflow:auto">
+    <section ref="{{ chatRef }}" style="flex:1.3 1 420px;min-width:0;max-height:100%;overflow:auto;padding:var(--space-6) var(--space-7) var(--space-10);display:flex;flex-direction:column;gap:6px;position:relative">
+      <sc-for list="{{ items }}" as="t" hint-placeholder-count="8">
+        <div data-lineas="{{ t.lineasAttr }}" style="display:flex;justify-content:{{ t.lado }}">
+          <sc-if value="{{ t.esHabla }}" hint-placeholder-val="{{ true }}">
+            <div style="max-width:min(560px,86%);display:flex;flex-direction:column;gap:4px;align-items:{{ t.alinea }}">
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font:var(--text-caption);color:var(--text-muted)">
+                <span style="font-weight:600;color:{{ t.colorQuien }}">{{ t.quien }}</span>
+                <sc-if value="{{ t.puedeOir }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ t.oir }}" title="Escuchar desde aquí" style="display:flex;align-items:center;gap:4px;padding:0 4px;height:18px;border:0;border-radius:3px;background:transparent;color:var(--text-muted);font:400 11.5px/1 var(--font-mono);cursor:pointer;white-space:nowrap" style-hover="background:var(--surface-hover);color:var(--text-accent)"><i class="ph-fill ph-play" style="font-size:10px"></i>{{ t.marca }}</button>
+                </sc-if>
+                <sc-if value="{{ t.noOir }}" hint-placeholder-val="{{ true }}">
+                  <span style="font:400 11.5px/1 var(--font-mono)">{{ t.marca }}</span>
+                </sc-if>
+                <sc-for list="{{ t.chips }}" as="ch" hint-placeholder-count="0">
+                  <button onClick="{{ ch.ir }}" onMouseEnter="{{ ch.entra }}" onMouseLeave="{{ ch.sale }}" style="display:flex;align-items:center;gap:4px;height:18px;padding:0 6px;border:1px solid {{ ch.borde }};border-radius:3px;background:{{ ch.bg }};color:{{ ch.fg }};font:600 11px/1 var(--font-sans);cursor:pointer;white-space:nowrap;flex:none"><i class="ph ph-link-simple" style="font-size:11px"></i>{{ ch.texto }}</button>
+                </sc-for>
+              </div>
+              <div style="padding:9px 12px;border-radius:var(--radius-lg);font:var(--text-body-sm);font-size:14px;color:var(--text-strong);background:{{ t.bg }};box-shadow:{{ t.ring }};transition:box-shadow 160ms var(--ease-hover),background-color 160ms var(--ease-hover);display:flex;flex-direction:column;gap:2px">
+                <sc-for list="{{ t.segs }}" as="s" hint-placeholder-count="1">
+                  <span style="padding:1px 3px;margin:0 -3px;border-radius:2px;background:{{ s.bg }};transition:background-color 160ms var(--ease-hover)">{{ s.texto }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ t.esHerr }}" hint-placeholder-val="{{ false }}">
+            <div style="width:100%;display:flex;flex-direction:column;align-items:center">
+              <button onClick="{{ t.expandir }}" style="display:flex;align-items:center;gap:8px;height:20px;padding:0 8px;border:0;border-radius:3px;background:transparent;font:400 11.5px/1 var(--font-mono);color:var(--text-muted);cursor:pointer;white-space:nowrap" style-hover="background:var(--surface-hover)">
+                <i class="ph ph-plugs-connected" style="font-size:12px"></i><span style="color:var(--text-body)">{{ t.herramienta }}</span><span style="color:{{ t.colorLat }}">{{ t.lat }}</span><i class="{{ t.flecha }}" style="font-size:10px"></i>
+              </button>
+              <sc-if value="{{ t.abierto }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:2px;max-width:100%;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:var(--radius-md);background:var(--surface-sunken);font:400 11.5px/1.6 var(--font-mono);color:var(--text-body);display:flex;flex-direction:column">
+                  <span><span style="color:var(--text-muted)">entrada </span>{{ t.entrada }}</span>
+                  <span><span style="color:var(--text-muted)">salida  </span>{{ t.salida }}</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ t.esSis }}" hint-placeholder-val="{{ false }}">
+            <div style="width:100%;display:flex;align-items:center;gap:10px;margin-top:8px;font:var(--text-caption);color:var(--text-muted)"><div style="flex:1;height:1px;background:var(--border-subtle)"></div>{{ t.texto }} · {{ t.marca }}<div style="flex:1;height:1px;background:var(--border-subtle)"></div></div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+
+    <aside style="flex:1 1 380px;min-width:0;max-height:100%;overflow:auto;background:var(--surface-card);border-left:1px solid var(--border-subtle);display:flex;flex-direction:column">
+      <div style="padding:var(--space-6) var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <h2 style="font:var(--text-h4);color:var(--text-strong);margin:0">Pedido que salió de la conversación</h2>
+          <span style="font:var(--text-caption);color:var(--text-muted)">{{ nPartidas }}</span>
+        </div>
+        <span style="font:var(--text-caption);color:var(--text-muted)">{{ ayuda }}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;padding:0 var(--space-4);gap:4px">
+        <sc-for list="{{ partidas }}" as="p" hint-placeholder-count="3">
+          <div onMouseEnter="{{ p.entra }}" onMouseLeave="{{ p.sale }}" onClick="{{ p.ir }}" style="display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:var(--radius-lg);cursor:pointer;background:{{ p.bg }};box-shadow:{{ p.ring }};transition:background-color 160ms var(--ease-hover),box-shadow 160ms var(--ease-hover)">
+            <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:start">
+              <span style="width:22px;height:22px;display:grid;place-items:center;border-radius:4px;font:600 12px/1 var(--font-sans);background:{{ p.numBg }};color:{{ p.numFg }};transition:background-color 160ms var(--ease-hover)">{{ p.linea }}</span>
+              <div style="min-width:0;display:flex;flex-direction:column;gap:2px">
+                <span style="font:600 13.5px/1.3 var(--font-sans);color:var(--text-strong)">{{ p.nombre }}</span>
+                <span style="font:var(--text-caption);color:var(--text-muted);font-variant-numeric:tabular-nums">{{ p.detalle }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums">
+                <span style="font:600 13.5px/1.3 var(--font-sans);color:var(--text-strong)">{{ p.imp }}</span>
+                <span style="font:var(--text-caption);color:var(--text-muted)">{{ p.kg }}</span>
+              </div>
+            </div>
+            <div style="margin-left:34px;display:flex;align-items:center;gap:8px;padding:7px 8px 7px 10px;border-radius:var(--radius-md);background:{{ p.fraseBg }};border:1px solid {{ p.fraseBorde }}">
+              <i class="ph-fill ph-quotes" style="flex:none;font-size:14px;color:{{ p.comillas }}"></i>
+              <span style="flex:1;min-width:0;font:var(--text-body-sm);color:var(--text-strong)">{{ p.frase }}</span>
+              <sc-if value="{{ p.conAudio }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ p.oir }}" title="Escuchar al cliente desde este segundo" style="flex:none;display:flex;align-items:center;gap:6px;height:26px;padding:0 8px;border:1px solid {{ p.btnBorde }};border-radius:var(--radius-sm);background:{{ p.btnBg }};color:{{ p.btnFg }};font:500 12px/1 var(--font-mono);cursor:pointer"><i class="{{ p.btnIcono }}" style="font-size:11px"></i>{{ p.marca }}</button>
+              </sc-if>
+              <sc-if value="{{ p.sinAudio }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:400 11.5px/1 var(--font-mono);color:var(--text-muted)">{{ p.marca }}</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ p.hayNota }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-left:34px;display:flex;align-items:center;gap:6px;font:var(--text-caption);color:var(--status-warning)"><i class="ph ph-warning"></i>{{ p.nota }}</div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:auto;padding:var(--space-5) var(--space-6);border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums">
+        <div style="display:flex;justify-content:space-between;font:var(--text-body-sm);color:var(--text-muted)"><span>Kilos</span><span style="color:var(--text-body)">{{ kgTotal }}</span></div>
+        <div style="display:flex;justify-content:space-between;font:var(--text-body-sm);color:var(--text-muted)"><span>Crédito disponible</span><span style="color:{{ credColor }}">{{ credito }}</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px"><span style="font:var(--text-label);color:var(--text-strong)">Total</span><span style="font:600 18px/1 var(--font-sans);color:var(--text-strong)">{{ total }}</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const $ = (n, d = 2) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d });
+const N = n => Number(n).toLocaleString('es-MX');
+const mmss = ms => { const s = Math.floor((ms || 0) / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const CANAL = { voz: ['Llamada', 'ph ph-phone'], whatsapp: ['WhatsApp', 'ph ph-whatsapp-logo'], texto: ['Mensaje de texto', 'ph ph-chat-text'], email: ['Correo', 'ph ph-envelope-simple'] };
+const ESTADO = { por_aprobar: ['Por aprobar', 'var(--status-warning-soft)', 'var(--status-warning)'], confirmado: ['Aprobado · enviado al ERP', 'var(--status-success-soft)', 'var(--status-success)'], cancelado: ['Rechazado', 'var(--status-danger-soft)', 'var(--status-danger)'] };
+const NBARRAS = 150;
+
+class Component extends DCLogic {
+  state = { t: 0, play: false, hover: null, fija: null, abiertos: {}, vel: 1 };
+  chatRef = React.createRef();
+  ondaRef = React.createRef();
+  componentDidMount() {
+    this.onKey = e => this.tecla(e);
+    window.addEventListener('keydown', this.onKey);
+  }
+  componentWillUnmount() { window.removeEventListener('keydown', this.onKey); clearInterval(this.iv); }
+  dur() { return this.props.traza?.duracion_ms || 1; }
+  tecla(e) {
+    if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
+    const k = e.key.toLowerCase(), n = this.props.pedido?.partidas.length || 0;
+    if (k === 'escape') this.props.onVolver?.();
+    else if (k === ' ') { e.preventDefault(); this.alternar(); }
+    else if (k === 'a' && this.props.estado === 'por_aprobar') this.props.onResolver?.('confirmado');
+    else if (k === 'r' && this.props.estado === 'por_aprobar') this.props.onResolver?.('cancelado');
+    else if (k === 'arrowdown' || k === 'arrowup') { e.preventDefault(); const cur = this.state.fija ?? 0; const nx = Math.max(1, Math.min(n, cur + (k === 'arrowdown' ? 1 : -1))); this.fijar(nx, false); }
+    else if (/^[1-9]$/.test(k) && +k <= n) this.fijar(+k, true);
+  }
+  reproducir(ms) {
+    clearInterval(this.iv);
+    this.setState({ t: ms, play: true });
+    this.iv = setInterval(() => {
+      const t = this.state.t + 100 * this.state.vel;
+      if (t >= this.dur()) { clearInterval(this.iv); this.setState({ t: this.dur(), play: false }); }
+      else this.setState({ t });
+    }, 100);
+  }
+  pausar() { clearInterval(this.iv); this.setState({ play: false }); }
+  alternar() { if (this.props.pedido?.canal !== 'voz') return; this.state.play ? this.pausar() : this.reproducir(this.state.t >= this.dur() ? 0 : this.state.t); }
+  fijar(linea, oir) {
+    const p = this.props.pedido.partidas.find(x => x.linea === linea);
+    this.setState({ fija: linea }, () => this.enfocar(linea, true));
+    if (oir && p?.offset_audio_ms != null) this.reproducir(Math.max(0, p.offset_audio_ms - 400));
+  }
+  enfocar(linea, centrar) {
+    const c = this.chatRef.current; if (!c) return;
+    const el = [...c.querySelectorAll('[data-lineas]')].find(x => (x.dataset.lineas || '').split(',').includes(String(linea)));
+    if (!el) return;
+    const top = el.offsetTop, bot = top + el.offsetHeight;
+    if (centrar || top < c.scrollTop || bot > c.scrollTop + c.clientHeight) c.scrollTo({ top: top - c.clientHeight / 2 + el.offsetHeight / 2, behavior: 'smooth' });
+  }
+  lineaSonando() {
+    if (!this.state.play) return null;
+    const ps = this.props.pedido.partidas.filter(p => p.offset_audio_ms != null && p.offset_audio_ms <= this.state.t && this.state.t < p.offset_audio_ms + 3400);
+    return ps.length ? ps[ps.length - 1].linea : null;
+  }
+  onda() {
+    const f = this.props.pedido?.folio;
+    if (this._ondaF === f) return this._onda;
+    const turnos = this.props.traza.turnos.filter(t => t.tipo === 'cliente' || t.tipo === 'agente');
+    const D = this.dur(); let s = f.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    this._onda = Array.from({ length: NBARRAS }, (_, i) => {
+      const ms = (i + 0.5) / NBARRAS * D;
+      const tu = [...turnos].reverse().find(t => t.offset_audio_ms <= ms);
+      const amp = tu ? (tu.tipo === 'cliente' ? 0.95 : 0.6) : 0.2;
+      return { ms, h: Math.max(8, Math.round((0.25 + r() * 0.75) * amp * 100)) };
+    });
+    this._ondaF = f; return this._onda;
+  }
+  renderVals() {
+    const ped = this.props.pedido, tr = this.props.traza;
+    if (!ped || !tr) return { items: [], partidas: [], marcas: [], barras: [], h: {} };
+    const voz = ped.canal === 'voz', D = this.dur(), T = this.state.t;
+    const act = this.state.hover ?? this.state.fija ?? this.lineaSonando();
+    const setH = l => () => { this.setState({ hover: l }); this.enfocar(l, false); };
+    const quitH = () => this.setState({ hover: null });
+    const herr = tr.turnos.filter(t => t.tipo === 'herramienta');
+    const latProm = Math.round(herr.reduce((s, t) => s + t.latencia_ms, 0) / (herr.length || 1));
+    const habla = tr.turnos.filter(t => t.tipo !== 'herramienta');
+    const sonandoSeq = voz && (this.state.play || T > 0) ? ([...habla].reverse().find(t => t.offset_audio_ms <= T)?.secuencia) : null;
+    const items = tr.turnos.map(t => {
+      const base = { esHabla: false, esHerr: false, esSis: false, lado: 'center', lineasAttr: '' };
+      const marca = voz ? mmss(t.offset_audio_ms) : t.creado_en.slice(0, 5);
+      if (t.tipo === 'herramienta') {
+        const ab = !!this.state.abiertos[t.secuencia];
+        return { ...base, esHerr: true, herramienta: t.herramienta, lat: t.latencia_ms + ' ms', colorLat: t.latencia_ms > 250 ? 'var(--status-warning)' : 'var(--text-muted)', entrada: t.entrada, salida: t.salida, abierto: ab, flecha: ab ? 'ph ph-caret-up' : 'ph ph-caret-down', expandir: () => this.setState(s => ({ abiertos: { ...s.abiertos, [t.secuencia]: !s.abiertos[t.secuencia] } })) };
+      }
+      if (t.tipo === 'sistema') return { ...base, esSis: true, texto: t.contenido, marca };
+      const cli = t.tipo === 'cliente';
+      let segs;
+      if (t.linea_multi) segs = t.contenido.split('\n').map((x, k) => ({ texto: x, linea: k + 1 }));
+      else segs = [{ texto: t.contenido, linea: t.linea ?? null }];
+      const lineas = [...new Set(segs.map(s => s.linea).filter(Boolean))];
+      const vinculado = act != null && lineas.includes(act);
+      const sonando = t.secuencia === sonandoSeq;
+      return {
+        ...base, esHabla: true, lado: cli ? 'flex-end' : 'flex-start', alinea: cli ? 'flex-end' : 'flex-start', lineasAttr: lineas.join(','),
+        quien: cli ? ped.cliente.nombre.split(' ')[0] + ' · cliente' : 'Agente', colorQuien: cli ? 'var(--text-strong)' : 'var(--text-accent)',
+        marca, puedeOir: voz, noOir: !voz, oir: () => this.reproducir(t.offset_audio_ms),
+        bg: vinculado ? 'var(--surface-accent-soft)' : (cli ? 'var(--surface-card)' : 'var(--surface-sunken)'),
+        ring: vinculado ? '0 0 0 2px var(--border-accent)' : (sonando ? '0 0 0 1px var(--text-strong)' : (cli ? 'inset 0 0 0 1px var(--border-subtle)' : 'none')),
+        segs: segs.map(s => ({ texto: s.texto, bg: act != null && s.linea === act && segs.length > 1 ? 'color-mix(in srgb,var(--surface-accent) 22%,transparent)' : 'transparent' })),
+        chips: lineas.map(l => ({ texto: (t.confirma ? 'Confirma partida ' : 'Partida ') + l, ir: () => this.fijar(l, false), entra: () => this.setState({ hover: l }), sale: quitH, bg: act === l ? 'var(--surface-accent)' : 'transparent', fg: act === l ? 'var(--text-on-accent)' : 'var(--text-accent)', borde: act === l ? 'var(--surface-accent)' : 'var(--border-accent)' })),
+      };
+    });
+    const partidas = ped.partidas.map(p => {
+      const on = act === p.linea, fija = this.state.fija === p.linea;
+      const sonando = voz && this.state.play && this.lineaSonando() === p.linea;
+      return {
+        linea: p.linea, nombre: p.nombre_corto, detalle: `${p.sku} · pidió “${p.cantidad_texto}” · ${$(p.precio_unitario)}/kg`, imp: $(p.importe), kg: N(p.cantidad_kg) + ' kg',
+        frase: p.frase_origen, marca: voz ? mmss(p.offset_audio_ms) : 'mensaje ' + ped.hora, conAudio: voz, sinAudio: !voz,
+        hayNota: !!(p.sustituye || p.justo), nota: p.sustituye ? `Pidió ${p.sustituye.toLowerCase()}; aceptó el sustituto en la llamada` : 'Inventario justo al momento de la llamada',
+        bg: on ? 'var(--surface-accent-soft)' : 'transparent', ring: fija ? '0 0 0 2px var(--border-accent)' : 'none',
+        numBg: on ? 'var(--surface-accent)' : 'var(--surface-sunken)', numFg: on ? 'var(--text-on-accent)' : 'var(--text-body)',
+        fraseBg: on ? 'var(--surface-card)' : 'var(--surface-sunken)', fraseBorde: on ? 'var(--border-accent)' : 'transparent', comillas: on ? 'var(--surface-accent)' : 'var(--text-muted)',
+        btnBg: sonando ? 'var(--surface-accent)' : 'var(--surface-card)', btnFg: sonando ? 'var(--text-on-accent)' : 'var(--text-accent)', btnBorde: sonando ? 'var(--surface-accent)' : 'var(--border-default)', btnIcono: sonando ? 'ph-fill ph-speaker-high' : 'ph-fill ph-play',
+        entra: setH(p.linea), sale: quitH, ir: () => this.fijar(p.linea, voz),
+        oir: e => { e.stopPropagation(); this.fijar(p.linea, true); },
+      };
+    });
+    const marcas = voz ? ped.partidas.map(p => {
+      const on = act === p.linea;
+      return { n: p.linea, left: (p.offset_audio_ms / D * 100).toFixed(2) + '%', titulo: `Partida ${p.linea} · ${p.nombre_corto} · ${mmss(p.offset_audio_ms)}`, bg: on ? 'var(--surface-accent)' : 'var(--surface-card)', fg: on ? 'var(--text-on-accent)' : 'var(--text-accent)', borde: 'var(--border-accent)', linea: on ? 'var(--surface-accent)' : 'color-mix(in srgb,var(--surface-accent) 45%,transparent)', z: on ? 3 : 1, ir: () => this.fijar(p.linea, true), entra: () => this.setState({ hover: p.linea }), sale: quitH };
+    }) : [];
+    const barras = voz ? this.onda().map(b => ({ h: b.h + '%', c: b.ms <= T ? 'var(--surface-accent)' : 'var(--border-strong)' })) : [];
+    const cli = ped.cliente, disp = cli.limite_credito - cli.saldo_actual;
+    const [eT, eBg, eFg] = ESTADO[this.props.estado] || ESTADO.por_aprobar;
+    return {
+      h: { razon: cli.razon_social === 'No registrado' ? cli.nombre + ' (sin registro)' : cli.razon_social, folio: ped.folio, estado: eT, estadoBg: eBg, estadoFg: eFg, canal: CANAL[ped.canal][0], canalIcono: CANAL[ped.canal][1], telefono: cli.telefono, hora: ped.hora, duracion: mmss(D), consultas: `${herr.length} consultas al sistema · ${latProm} ms en promedio` },
+      pendiente: this.props.estado === 'por_aprobar', esVoz: voz,
+      volver: () => this.props.onVolver?.(), aprobar: () => this.props.onResolver?.('confirmado'), rechazar: () => this.props.onResolver?.('cancelado'),
+      iconoPlay: this.state.play ? 'ph-fill ph-pause' : 'ph-fill ph-play', alternar: () => this.alternar(),
+      tiempo: mmss(T) + ' / ' + mmss(D), cabezal: (T / D * 100).toFixed(2) + '%', vel: this.state.vel + '×',
+      cambiarVel: () => this.setState(s => ({ vel: s.vel === 1 ? 1.5 : s.vel === 1.5 ? 2 : 1 })),
+      ondaRef: this.ondaRef, chatRef: this.chatRef,
+      buscar: e => { const r = this.ondaRef.current.getBoundingClientRect(); this.reproducir(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * D); },
+      marcas, barras, items, partidas,
+      nPartidas: ped.partidas.length + ' partidas',
+      ayuda: voz ? 'Pasa el cursor sobre una partida para ver dónde la pidió el cliente. Clic o teclas 1 a 9 para escucharla.' : 'Pasa el cursor sobre una partida para ver el renglón del mensaje que la originó.',
+      kgTotal: N(ped.partidas.reduce((s, p) => s + p.cantidad_kg, 0)) + ' kg',
+      credito: cli.limite_credito ? $(disp) : 'Sin línea de crédito', credColor: cli.limite_credito && ped.total <= disp ? 'var(--status-success)' : 'var(--status-danger)',
+      total: $(ped.total),
+    };
+  }
+}
+</script>
+</body>
+</html>

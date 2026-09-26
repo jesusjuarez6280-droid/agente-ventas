@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;gap:var(--space-6);padding:var(--space-6) var(--space-7) var(--space-10);max-width:1440px">
+  <header style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-5) var(--space-8)">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <h1 style="font:var(--text-h3);color:var(--text-strong);margin:0">Tablero</h1>
+      <span style="font:var(--text-caption);color:var(--text-muted)">{{ rango }}</span>
+    </div>
+    <div style="flex:1"></div>
+    <div style="display:flex;gap:2px;padding:2px;background:var(--surface-sunken);border:1px solid var(--border-subtle);border-radius:var(--radius-md)">
+      <sc-for list="{{ periodos }}" as="p" hint-placeholder-count="3">
+        <button onClick="{{ p.ir }}" style="height:28px;padding:0 var(--space-6);border:0;border-radius:var(--radius-sm);font:var(--text-label);cursor:pointer;color:{{ p.color }};background:{{ p.bg }};box-shadow:{{ p.sombra }}">{{ p.label }}</button>
+      </sc-for>
+    </div>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;gap:var(--space-5)">
+    <section style="flex:1.1 1 420px;min-width:0;display:flex;flex-direction:column;gap:var(--space-5);padding:var(--space-6) var(--space-7);background:var(--surface-card);border-radius:var(--radius-card);box-shadow:var(--shadow-raised)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+        <span style="font:var(--text-eyebrow);letter-spacing:var(--tracking-eyebrow);text-transform:uppercase;color:var(--text-muted)">Tasa de acierto</span>
+        <span style="font:var(--text-caption);color:var(--text-muted)">Pedidos aprobados sin corregir nada</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--space-5) var(--space-8)">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 64px/0.95 var(--font-sans);letter-spacing:-0.035em;color:var(--text-strong);font-variant-numeric:tabular-nums">{{ k.acierto }}</span>
+          <span style="display:flex;align-items:center;gap:6px;font:var(--text-label);color:var(--status-success)"><i class="ph-bold ph-trend-up"></i>{{ k.aciertoDelta }}</span>
+        </div>
+        <div style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column;gap:6px">
+        <svg viewBox="0 0 300 100" preserveAspectRatio="none" style="width:100%;height:92px;overflow:visible">
+          <rect x="0" y="0" width="300" height="{{ g.yUmbral }}" fill="var(--status-success-soft)" opacity="0.6"></rect>
+          <line x1="0" x2="300" y1="{{ g.yUmbral }}" y2="{{ g.yUmbral }}" stroke="var(--status-success)" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"></line>
+          <polyline points="{{ g.puntos }}" fill="none" stroke="var(--surface-accent)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+          <circle cx="{{ g.ux }}" cy="{{ g.uy }}" r="3.5" fill="var(--surface-accent)"></circle>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font:400 11px/1 var(--font-mono);color:var(--text-muted)">
+          <sc-for list="{{ g.etiquetas }}" as="e" hint-placeholder-count="7"><span>{{ e }}</span></sc-for>
+        </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-top:var(--space-4);border-top:1px solid var(--border-subtle)">
+        <div style="position:relative;height:8px;border-radius:2px;background:var(--surface-sunken);box-shadow:inset 0 0 0 1px var(--border-subtle)">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:{{ k.aciertoPct }};border-radius:2px;background:var(--surface-accent)"></div>
+          <div style="position:absolute;left:95%;top:-4px;bottom:-4px;width:2px;background:var(--status-success)"></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font:var(--text-caption);color:var(--text-muted)">
+          <span>{{ k.faltan }}</span>
+          <span style="color:var(--status-success);font-weight:600">Umbral 95%</span>
+        </div>
+      </div>
+    </section>
+
+    <div style="flex:1.4 1 480px;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1px;background:var(--surface-card);border-radius:var(--radius-card);overflow:hidden;box-shadow:var(--shadow-raised)">
+      <sc-for list="{{ kpis }}" as="x" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:6px;padding:var(--space-6);background:var(--surface-card);box-shadow:0 0 0 1px var(--border-subtle)">
+          <span style="font:var(--text-label);color:var(--text-muted)">{{ x.titulo }}</span>
+          <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px">
+            <span style="font:600 28px/1.05 var(--font-sans);letter-spacing:-0.02em;color:var(--text-strong);font-variant-numeric:tabular-nums">{{ x.valor }}</span>
+            <span style="font:var(--text-body-sm);color:var(--text-body);font-variant-numeric:tabular-nums">{{ x.sub }}</span>
+          </div>
+          <span style="font:var(--text-caption);color:{{ x.colorNota }};font-variant-numeric:tabular-nums">{{ x.nota }}</span>
+          <sc-for list="{{ x.lista }}" as="m" hint-placeholder-count="0">
+            <div style="display:flex;justify-content:space-between;gap:8px;font:var(--text-caption);color:var(--text-body);font-variant-numeric:tabular-nums"><span>{{ m.t }}</span><span style="color:var(--text-muted)">{{ m.n }}</span></div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:var(--space-5)">
+    <section style="flex:1.4 1 520px;min-width:0;background:var(--surface-card);border-radius:var(--radius-card);box-shadow:var(--shadow-raised);overflow:hidden">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;padding:var(--space-6) var(--space-6) var(--space-5)">
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <h2 style="font:var(--text-h4);color:var(--text-strong);margin:0">Venta en riesgo</h2>
+          <span style="font:var(--text-caption);color:var(--text-muted)">Lo que los clientes pidieron y no había en existencia</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+          <span style="font:600 24px/1 var(--font-sans);letter-spacing:-0.02em;color:var(--status-danger);font-variant-numeric:tabular-nums">{{ riesgoTotal }}</span>
+          <span style="font:var(--text-caption);color:var(--text-muted)">{{ riesgoNota }}</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <div style="min-width:560px">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 96px 150px 132px;gap:12px;padding:7px var(--space-6);font:var(--text-caption);color:var(--text-muted);background:var(--surface-sunken);border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)">
+            <span>Producto</span><span style="text-align:right">Veces</span><span style="text-align:right">Kg sin surtir</span><span style="text-align:right">Monto perdido</span><span>Próxima entrada</span>
+          </div>
+          <sc-for list="{{ riesgo }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 96px 150px 132px;gap:12px;align-items:center;padding:9px var(--space-6);border-bottom:1px solid var(--border-subtle);font-variant-numeric:tabular-nums">
+              <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font:500 13px/1.3 var(--font-sans);color:var(--text-strong)">{{ r.producto }}</span><span style="font:400 11px/1.2 var(--font-mono);color:var(--text-muted)">{{ r.sku }}</span></div>
+              <span style="text-align:right;font:var(--text-body-sm);color:var(--text-body)">{{ r.veces }}</span>
+              <span style="text-align:right;font:var(--text-body-sm);color:var(--text-body)">{{ r.kg }}</span>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span style="font:600 13px/1 var(--font-sans);color:var(--text-strong)">{{ r.monto }}</span>
+                <div style="width:100%;height:3px;background:var(--surface-sunken);border-radius:2px;display:flex;justify-content:flex-end"><div style="width:{{ r.pct }};background:var(--status-danger);border-radius:2px"></div></div>
+              </div>
+              <span style="font:var(--text-caption);color:{{ r.colorProx }}">{{ r.proxima }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="flex:1 1 400px;min-width:0;background:var(--surface-card);border-radius:var(--radius-card);box-shadow:var(--shadow-raised);overflow:hidden;display:flex;flex-direction:column">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;padding:var(--space-6) var(--space-6) var(--space-5);border-bottom:1px solid var(--border-subtle)">
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <h2 style="font:var(--text-h4);color:var(--text-strong);margin:0">Lo que la IA no entendió</h2>
+          <span style="font:var(--text-caption);color:var(--text-muted)">Asigna el término a un producto y la próxima vez se reconoce</span>
+        </div>
+        <span style="font:var(--text-caption);color:var(--text-muted)">{{ resueltos }}</span>
+      </div>
+      <sc-for list="{{ alias }}" as="a" hint-placeholder-count="6">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:9px var(--space-6);border-bottom:1px solid var(--border-subtle);background:{{ a.bg }}">
+          <div style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font:600 13.5px/1.3 var(--font-sans);color:var(--text-strong)">“{{ a.termino }}”</span><span style="font:500 12px/1 var(--font-sans);color:var(--text-muted);font-variant-numeric:tabular-nums">{{ a.veces }}</span></div>
+            <span style="font:var(--text-caption);color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.ejemplo }}</span>
+          </div>
+          <sc-if value="{{ a.libre }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ a.abrir }}" style="height:28px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid var(--border-default);border-radius:var(--radius-control);background:var(--surface-card);color:var(--text-accent);font:var(--text-label);cursor:pointer" style-hover="background:var(--surface-accent-soft)"><i class="ph ph-link-simple"></i>Asignar a producto</button>
+          </sc-if>
+          <sc-if value="{{ a.eligiendo }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:6px">
+              <select onChange="{{ a.elegir }}" value="{{ a.valor }}" style="height:28px;max-width:190px;padding:0 6px;border:1px solid var(--border-accent);border-radius:var(--radius-control);background:var(--surface-card);color:var(--text-strong);font:var(--text-label)">
+                <sc-for list="{{ opciones }}" as="o" hint-placeholder-count="0"><option value="{{ o.sku }}">{{ o.nombre }}</option></sc-for>
+              </select>
+              <button onClick="{{ a.confirmar }}" style="height:28px;padding:0 10px;border:0;border-radius:var(--radius-control);background:var(--surface-accent);color:var(--text-on-accent);font:var(--text-label);cursor:pointer">Guardar</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ a.hecho }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:6px;font:var(--text-label);color:var(--status-success)"><i class="ph-bold ph-check"></i>{{ a.asignado }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+  </div>
+
+  <section style="background:var(--surface-card);border-radius:var(--radius-card);box-shadow:var(--shadow-raised);padding:var(--space-6)">
+    <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px;margin-bottom:var(--space-6)">
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <h2 style="font:var(--text-h4);color:var(--text-strong);margin:0">Actividad por hora</h2>
+        <span style="font:var(--text-caption);color:var(--text-muted)">Llamadas atendidas por el agente · horario de oficina de 9:00 a 18:00</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 18px;font:var(--text-caption);color:var(--text-body)">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--surface-accent)"></span>{{ fueraTexto }}</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--border-strong)"></span>En horario de oficina</span>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:6px;height:180px">
+      <sc-for list="{{ horas }}" as="h" hint-placeholder-count="17">
+        <div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;background:{{ h.banda }};border-radius:2px 2px 0 0;padding:0 2px">
+          <span style="font:500 11px/1 var(--font-sans);color:{{ h.colorNum }};font-variant-numeric:tabular-nums">{{ h.n }}</span>
+          <div style="width:100%;max-width:36px;height:{{ h.alto }};background:{{ h.color }};border-radius:2px 2px 0 0"></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;gap:6px;border-top:1px solid var(--border-default);padding-top:6px">
+      <sc-for list="{{ horas }}" as="h" hint-placeholder-count="17">
+        <span style="flex:1;min-width:0;text-align:center;font:400 11px/1 var(--font-mono);color:var(--text-muted)">{{ h.label }}</span>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const $ = (n, d = 0) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d });
+const N = n => Number(n).toLocaleString('es-MX');
+const F = { hoy: 0.045, semana: 0.26, mes: 1 };
+const VS = { hoy: 'vs ayer', semana: 'vs semana anterior', mes: 'vs agosto' };
+const RANGO = { hoy: 'Sábado 26 de septiembre de 2026', semana: 'Del 21 al 26 de septiembre', mes: 'Septiembre 2026, al día 26' };
+
+class Component extends DCLogic {
+  state = { periodo: 'semana', eligiendo: null, valor: null, asignados: {} };
+  renderVals() {
+    const d = this.props.datos; if (!d) return { periodos: [], kpis: [], riesgo: [], alias: [], horas: [], g: {}, k: {} };
+    const per = this.state.periodo, t = d.tablero[per], f = F[per];
+    const pct = (a, b) => ((a - b) / b * 100).toFixed(1).replace('.', '.') + '%';
+    const periodos = [['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes']].map(([k, label]) => ({ label, ir: () => this.setState({ periodo: k }), color: per === k ? 'var(--text-strong)' : 'var(--text-body)', bg: per === k ? 'var(--surface-card)' : 'transparent', sombra: per === k ? 'var(--shadow-raised)' : 'none' }));
+    const lo = 65, hi = 100, y = v => ((hi - v) / (hi - lo) * 100);
+    const n = t.tendencia.length, x = i => 6 + i * (288 / (n - 1));
+    const g = {
+      puntos: t.tendencia.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' '),
+      ux: x(n - 1), uy: y(t.tendencia[n - 1]), yUmbral: y(95), etiquetas: t.etiquetas,
+    };
+    const k = {
+      acierto: t.acierto.toFixed(1) + '%', aciertoDelta: `+${(t.acierto - t.acierto_prev).toFixed(1)} pts ${VS[per]}`,
+      aciertoPct: t.acierto + '%', faltan: `Faltan ${(95 - t.acierto).toFixed(1)} puntos para que el agente escriba al ERP sin aprobación`,
+    };
+    const up = (a, b) => (a >= b ? '+' : '') + pct(a, b) + ' ' + VS[per];
+    const kpis = [
+      { titulo: 'Llamadas atendidas', valor: N(t.llamadas), sub: '', nota: up(t.llamadas, t.llamadas_prev), colorNota: 'var(--status-success)', lista: [] },
+      { titulo: 'Pedidos levantados', valor: N(t.pedidos), sub: $(t.monto), nota: `${Math.round(t.pedidos / t.llamadas * 100)}% de las llamadas terminó en pedido · venta ${up(t.monto, t.monto_prev)}`, colorNota: 'var(--text-muted)', lista: [] },
+      { titulo: 'Tiempo de respuesta del agente', valor: N(t.lat_p50) + ' ms', sub: 'mediana', nota: `El 95% de las respuestas en menos de ${N(t.lat_p95)} ms`, colorNota: 'var(--text-muted)', lista: [] },
+      { titulo: 'Escalamientos a persona', valor: N(t.escal), sub: (t.escal / t.llamadas * 100).toFixed(1) + '% de las llamadas', nota: 'Motivo', colorNota: 'var(--text-muted)', lista: t.motivos.map(([m, c]) => ({ t: m, n: N(c) })) },
+    ];
+    const rs = d.ventaRiesgo.map(r => ({ ...r, monto: r.monto * f, kg: Math.round(r.kg * f / 50) * 50, veces: Math.max(1, Math.round(r.veces * f)) })).sort((a, b) => b.monto - a.monto);
+    const max = rs[0].monto, tot = rs.reduce((s, r) => s + r.monto, 0);
+    const riesgo = rs.map(r => ({ producto: r.producto, sku: r.sku, veces: N(r.veces), kg: N(r.kg), monto: $(r.monto), pct: (r.monto / max * 100).toFixed(0) + '%', proxima: r.proxima, colorProx: r.proxima === 'Sin fecha' ? 'var(--status-danger)' : 'var(--text-body)' }));
+    const opciones = d.productos.map(p => ({ sku: p.sku, nombre: p.nombre_corto }));
+    const alias = d.aliasPendientes.map(a => {
+      const asig = this.state.asignados[a.termino], el = this.state.eligiendo === a.termino;
+      return {
+        termino: a.termino, veces: Math.max(1, Math.round(a.veces * f)) + ' veces', ejemplo: a.ejemplo,
+        libre: !asig && !el, eligiendo: el, hecho: !!asig, asignado: asig ? 'Asignado a ' + d.productosPorSku[asig].nombre_corto : '',
+        bg: asig ? 'color-mix(in srgb,var(--status-success-soft) 50%,transparent)' : 'transparent',
+        valor: this.state.valor || opciones[0].sku,
+        abrir: () => this.setState({ eligiendo: a.termino, valor: opciones[0].sku }),
+        elegir: e => this.setState({ valor: e.target.value }),
+        confirmar: () => this.setState(s => ({ asignados: { ...s.asignados, [a.termino]: s.valor || opciones[0].sku }, eligiendo: null })),
+      };
+    });
+    const hs = d.porHora.map(([h, c]) => [h, Math.max(1, Math.round(c * f * 7.2))]);
+    const mx = Math.max(...hs.map(h => h[1])), [ini, fin] = d.HORARIO;
+    const fuera = hs.filter(([h]) => h < ini || h >= fin).reduce((s, h) => s + h[1], 0), totH = hs.reduce((s, h) => s + h[1], 0);
+    const horas = hs.map(([h, c]) => {
+      const out = h < ini || h >= fin;
+      return { n: N(c), alto: (c / mx * 88).toFixed(1) + '%', label: h + ':00', color: out ? 'var(--surface-accent)' : 'var(--border-strong)', colorNum: out ? 'var(--text-accent)' : 'var(--text-muted)', banda: out ? 'transparent' : 'var(--surface-sunken)' };
+    });
+    return {
+      rango: RANGO[per], periodos, g, k, kpis, riesgo,
+      riesgoTotal: $(tot), riesgoNota: `${per === 'hoy' ? 'hoy' : per === 'semana' ? 'esta semana' : 'este mes'} en pedidos sin surtir`,
+      alias, opciones, resueltos: Object.keys(this.state.asignados).length ? Object.keys(this.state.asignados).length + ' asignados' : `${d.aliasPendientes.length} pendientes`,
+      horas, fueraTexto: `Fuera de horario: ${N(fuera)} llamadas (${Math.round(fuera / totH * 100)}%) que nadie habría contestado`,
+    };
+  }
+}
+</script>
+</body>
+</html>

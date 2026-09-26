@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;height:100%;min-height:0">
+  <header style="flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4) var(--space-8);padding:var(--space-6) var(--space-7) var(--space-5);border-bottom:1px solid var(--border-subtle)">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <h1 style="font:var(--text-h3);color:var(--text-strong);margin:0">Llamadas en vivo</h1>
+      <span style="font:var(--text-caption);color:var(--text-muted)">3 llamadas en curso · ninguna en espera · el agente atiende todas a la vez</span>
+    </div>
+  </header>
+  <div style="flex:1;min-height:0;display:flex;flex-wrap:wrap;overflow:auto">
+    <nav style="flex:0 1 260px;min-width:220px;display:flex;flex-direction:column;border-right:1px solid var(--border-subtle);background:var(--surface-sunken)">
+      <sc-for list="{{ llamadas }}" as="l" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:4px;padding:12px var(--space-6);border-bottom:1px solid var(--border-subtle);background:{{ l.bg }};box-shadow:{{ l.borde }}">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+            <span style="display:flex;align-items:center;gap:6px;font:600 11px/1 var(--font-sans);letter-spacing:0.06em;text-transform:uppercase;color:var(--status-danger)"><span style="width:6px;height:6px;border-radius:50%;background:var(--status-danger)"></span>En curso</span>
+            <span style="font:500 12px/1 var(--font-mono);color:var(--text-body)">{{ l.dur }}</span>
+          </div>
+          <span style="font:600 13px/1.3 var(--font-sans);color:var(--text-strong)">{{ l.cliente }}</span>
+          <span style="font:var(--text-caption);color:var(--text-muted);font-variant-numeric:tabular-nums">{{ l.telefono }} · {{ l.estado }} · {{ l.partidas }}</span>
+        </div>
+      </sc-for>
+    </nav>
+    <section ref="{{ chatRef }}" style="flex:1.3 1 400px;min-width:0;max-height:100%;overflow:auto;padding:var(--space-6) var(--space-7);display:flex;flex-direction:column;gap:6px">
+      <sc-for list="{{ turnos }}" as="t" hint-placeholder-count="4">
+        <div style="display:flex;justify-content:{{ t.lado }};animation:entra 200ms var(--ease-out)">
+          <sc-if value="{{ t.esHabla }}" hint-placeholder-val="{{ true }}">
+            <div style="max-width:min(540px,86%);display:flex;flex-direction:column;gap:4px;align-items:{{ t.lado }}">
+              <span style="font:600 12px/1 var(--font-sans);color:{{ t.colorQuien }}">{{ t.quien }}</span>
+              <div style="padding:9px 12px;border-radius:var(--radius-lg);font:var(--text-body-sm);font-size:14px;color:var(--text-strong);background:{{ t.bg }};box-shadow:{{ t.ring }}">{{ t.texto }}<span style="opacity:{{ t.cursor }};color:var(--text-muted)">▍</span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ t.esHerr }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:8px;font:400 11.5px/1 var(--font-mono);color:var(--text-muted);padding:3px 0"><i class="ph ph-plugs-connected"></i><span style="color:var(--text-body)">{{ t.texto }}</span>{{ t.lat }}</span>
+          </sc-if>
+          <sc-if value="{{ t.esPartida }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:6px;font:600 11.5px/1 var(--font-sans);color:var(--status-success);padding:3px 0"><i class="ph-bold ph-plus"></i>{{ t.texto }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+    <aside style="flex:1 1 340px;min-width:0;max-height:100%;overflow:auto;background:var(--surface-card);border-left:1px solid var(--border-subtle);display:flex;flex-direction:column">
+      <div style="padding:var(--space-6) var(--space-6) var(--space-4);display:flex;flex-direction:column;gap:3px">
+        <h2 style="font:var(--text-h4);color:var(--text-strong);margin:0">Pedido en construcción</h2>
+        <span style="font:var(--text-caption);color:var(--text-muted)">Panificadora La Espiga de Oro · crédito disponible $131,600.00</span>
+      </div>
+      <sc-for list="{{ partidas }}" as="p" hint-placeholder-count="0">
+        <div style="display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px var(--space-6);border-top:1px solid var(--border-subtle);animation:entra 240ms var(--ease-out);background:{{ p.bg }};transition:background-color 900ms var(--ease-out)">
+          <span style="width:22px;height:22px;display:grid;place-items:center;border-radius:4px;background:var(--surface-sunken);font:600 12px/1 var(--font-sans);color:var(--text-body)">{{ p.linea }}</span>
+          <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font:600 13.5px/1.3 var(--font-sans);color:var(--text-strong)">{{ p.nombre }}</span><span style="font:var(--text-caption);color:var(--text-muted);font-variant-numeric:tabular-nums">{{ p.detalle }}</span></div>
+          <span style="font:600 13.5px/1.3 var(--font-sans);color:var(--text-strong);font-variant-numeric:tabular-nums">{{ p.imp }}</span>
+        </div>
+      </sc-for>
+      <sc-if value="{{ sinPartidas }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:var(--space-6);font:var(--text-body-sm);color:var(--text-muted);border-top:1px solid var(--border-subtle)">El pedido aparece aquí renglón por renglón mientras el cliente habla.</div>
+      </sc-if>
+      <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;padding:var(--space-5) var(--space-6);border-top:1px solid var(--border-subtle)">
+        <span style="font:var(--text-label);color:var(--text-strong)">Total parcial</span>
+        <span style="font:600 18px/1 var(--font-sans);color:var(--text-strong);font-variant-numeric:tabular-nums">{{ total }}</span>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const $ = (n, d = 2) => '$' + Number(n).toLocaleString('es-MX', { minimumFractionDigits: d, maximumFractionDigits: d });
+const N = n => Number(n).toLocaleString('es-MX');
+const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+class Component extends DCLogic {
+  state = { paso: 0, chars: 0, espera: 0, seg: 0, nuevo: null };
+  chatRef = React.createRef();
+  componentDidMount() { this.iv = setInterval(() => this.tick(), 50); }
+  componentWillUnmount() { clearInterval(this.iv); }
+  componentDidUpdate() { const c = this.chatRef.current; if (c) c.scrollTop = c.scrollHeight; }
+  guion() { return this.props.datos?.enVivo[0].guion || []; }
+  tick() {
+    const g = this.guion(); if (!g.length) return;
+    let { paso, chars, espera, seg } = this.state; seg += 0.05;
+    if (espera > 0) { this.setState({ espera: espera - 1, seg }); return; }
+    if (paso >= g.length) { this.setState({ paso: 0, chars: 0, espera: 0, seg: 0, nuevo: null }); return; }
+    const s = g[paso];
+    if (s[0] === 'agente' || s[0] === 'cliente') {
+      if (chars < s[1].length) { this.setState({ chars: chars + (s[0] === 'agente' ? 3 : 2), seg }); return; }
+      this.setState({ paso: paso + 1, chars: 0, espera: 14, seg });
+    } else if (s[0] === 'herramienta') this.setState({ paso: paso + 1, espera: 6, seg });
+    else this.setState({ paso: paso + 1, espera: paso + 1 >= g.length ? 80 : 10, seg, nuevo: paso });
+  }
+  renderVals() {
+    const d = this.props.datos; if (!d) return { turnos: [], partidas: [], llamadas: [] };
+    const g = this.guion(), { paso, chars } = this.state;
+    const turnos = [], partidas = [];
+    g.slice(0, Math.min(paso + 1, g.length)).forEach((s, i) => {
+      const actual = i === paso;
+      if (s[0] === 'agente' || s[0] === 'cliente') {
+        const cli = s[0] === 'cliente';
+        turnos.push({ esHabla: true, esHerr: false, esPartida: false, lado: cli ? 'flex-end' : 'flex-start', quien: cli ? 'Rogelio · cliente' : 'Agente', colorQuien: cli ? 'var(--text-strong)' : 'var(--text-accent)', texto: actual ? s[1].slice(0, chars) : s[1], cursor: actual ? 1 : 0, bg: cli ? 'var(--surface-card)' : 'var(--surface-sunken)', ring: cli ? 'inset 0 0 0 1px var(--border-subtle)' : 'none' });
+      } else if (s[0] === 'herramienta' && !actual) {
+        turnos.push({ esHabla: false, esHerr: true, esPartida: false, lado: 'center', texto: s[1], lat: s[2] + ' ms' });
+      } else if (s[0] === 'partida' && !actual) {
+        const p = d.productosPorSku[s[1]], pr = p.presentaciones[0], kg = s[2] * pr.kg;
+        partidas.push({ linea: partidas.length + 1, nombre: p.nombre_corto, detalle: `${s[2]} ${pr.nombre}s · ${N(kg)} kg · ${$(p.precio_kg)}/kg`, importe: kg * p.precio_kg, imp: $(kg * p.precio_kg), bg: this.state.nuevo === i ? 'var(--status-success-soft)' : 'transparent' });
+        turnos.push({ esHabla: false, esHerr: false, esPartida: true, lado: 'center', texto: `Partida ${partidas.length} agregada: ${p.nombre_corto}` });
+      }
+    });
+    const seg = 14 + this.state.seg;
+    const vivo = d.enVivo;
+    const llamadas = [
+      { cliente: vivo[0].cliente, telefono: vivo[0].telefono, dur: mmss(seg), estado: 'Pidiendo', partidas: partidas.length + ' partidas', bg: 'var(--surface-card)', borde: 'inset 3px 0 0 var(--surface-accent)' },
+      ...vivo.slice(1).map((l, k) => ({ cliente: l.cliente, telefono: l.telefono, dur: mmss(108 + k * 43 + seg), estado: l.estado, partidas: l.partidas + ' partidas', bg: 'transparent', borde: 'none' })),
+    ];
+    return { turnos, partidas, llamadas, chatRef: this.chatRef, sinPartidas: !partidas.length, total: $(partidas.reduce((s, p) => s + p.importe, 0)) };
+  }
+}
+</script>
+</body>
+</html>

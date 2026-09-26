@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bandeja de aprobación</title>
+<link rel="stylesheet" href="../ds/styles.css">
+<style>
+  /* Solo lo que el design system no cubre: el armazón de esta pantalla.
+     Todo color, espacio y tipografía sale de los tokens de ds/. */
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-page);color:var(--text-body);
+       height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{flex:none;display:flex;flex-wrap:wrap;align-items:center;
+         gap:var(--space-5) var(--space-8);
+         padding:var(--space-6) var(--space-7) var(--space-5);
+         border-bottom:1px solid var(--border-subtle)}
+
+  .filtros{display:flex;gap:2px;padding:2px;background:var(--surface-sunken);
+           border:1px solid var(--border-subtle);border-radius:var(--radius-md)}
+  .filtros button{height:26px;padding:0 var(--space-5);border:0;
+                  border-radius:var(--radius-sm);font:var(--text-label);
+                  cursor:pointer;display:flex;align-items:center;gap:6px;
+                  color:var(--text-muted);background:transparent}
+  .filtros button[aria-pressed="true"]{background:var(--surface-card);
+                  color:var(--text-strong);box-shadow:var(--shadow-raised)}
+
+  .cuerpo{flex:1;min-height:0;display:flex}
+  .lista{flex:0 0 clamp(320px,34%,460px);overflow:auto;
+         border-right:1px solid var(--border-subtle);background:var(--surface-card)}
+  .detalle{flex:1;min-width:0;overflow:auto;padding:var(--space-7)}
+
+  .fila{display:grid;grid-template-columns:20px minmax(0,1fr) 112px;
+        gap:10px;align-items:center;padding:10px var(--space-6);
+        border-bottom:1px solid var(--border-subtle);cursor:pointer}
+  .fila:hover{background:var(--surface-hover)}
+  .fila[aria-selected="true"]{background:var(--surface-accent-soft);
+        box-shadow:inset 3px 0 0 var(--surface-accent)}
+
+  .num{font-variant-numeric:tabular-nums;text-align:right;
+       font:var(--text-body-sm);color:var(--text-strong)}
+  .mono{font-family:var(--font-mono,ui-monospace,monospace);
+        font-variant-numeric:tabular-nums}
+
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font:var(--text-caption);color:var(--text-muted);
+     font-weight:500;padding:6px var(--space-4);border-bottom:1px solid var(--border-subtle)}
+  td{padding:8px var(--space-4);border-bottom:1px solid var(--border-subtle);
+     font:var(--text-body-sm);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  .bandera{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;
+           border-radius:var(--radius-pill);font:var(--text-caption);margin:0 6px 6px 0}
+  .alto{background:var(--status-danger-soft);color:var(--status-danger)}
+  .medio{background:var(--status-warning-soft);color:var(--status-warning)}
+  .bajo{background:var(--surface-sunken);color:var(--text-muted)}
+
+  .acciones{display:flex;gap:var(--space-4);margin:var(--space-6) 0}
+  .acciones button{height:36px;padding:0 var(--space-6);border-radius:var(--radius-control);
+                   font:var(--text-label);cursor:pointer;border:1px solid var(--border-default);
+                   background:var(--surface-card);color:var(--text-strong)}
+  .aprobar{background:var(--status-success)!important;color:#fff!important;border-color:transparent!important}
+  .rechazar{color:var(--status-danger)!important}
+  button:disabled{opacity:.45;cursor:not-allowed}
+
+  kbd{font-family:var(--font-mono,ui-monospace,monospace);font-size:11px;
+      padding:3px 5px;border-radius:3px;background:var(--surface-sunken);color:var(--text-muted)}
+
+  footer{flex:none;display:flex;gap:var(--space-7);flex-wrap:wrap;
+         padding:var(--space-4) var(--space-7);border-top:1px solid var(--border-subtle);
+         font:var(--text-caption);color:var(--text-muted);background:var(--surface-card)}
+
+  .vacio{padding:var(--space-10) var(--space-7);text-align:center;color:var(--text-muted)}
+  .aviso{padding:var(--space-4) var(--space-7);font:var(--text-caption);
+         background:var(--status-info-soft);color:var(--status-info);flex:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1 style="font:var(--text-h3);color:var(--text-strong);margin:0">Bandeja de aprobación</h1>
+    <div id="resumen" class="mono" style="font:var(--text-caption);color:var(--text-muted)">Cargando…</div>
+  </div>
+  <div class="filtros" id="filtros">
+    <button data-filtro="todos" aria-pressed="true">Todos <span class="mono" id="n-todos">0</span></button>
+    <button data-filtro="limpios" aria-pressed="false">Sin banderas <span class="mono" id="n-limpios">0</span></button>
+    <button data-filtro="banderas" aria-pressed="false">Con banderas <span class="mono" id="n-banderas">0</span></button>
+  </div>
+  <div style="flex:1"></div>
+  <button id="lote" style="height:32px;padding:0 var(--space-5);border:1px solid var(--border-default);
+          border-radius:var(--radius-control);background:var(--surface-card);color:var(--text-strong);
+          font:var(--text-label);cursor:pointer;display:flex;align-items:center;gap:var(--space-4)">
+    Aprobar sin banderas <kbd>⇧A</kbd>
+  </button>
+</header>
+
+<div id="aviso" class="aviso" hidden></div>
+
+<div class="cuerpo">
+  <section class="lista" id="lista" tabindex="0" aria-label="Pedidos por aprobar"></section>
+  <section class="detalle" id="detalle"></section>
+</div>
+
+<footer>
+  <span><kbd>↑</kbd><kbd>↓</kbd> Mover</span>
+  <span><kbd>A</kbd> Aprobar</span>
+  <span><kbd>R</kbd> Rechazar</span>
+  <span><kbd>E</kbd> Aprobar con corrección</span>
+  <span><kbd>⇧A</kbd> Aprobar lote</span>
+</footer>
+
+<script type="module">
+// ---------------------------------------------------------------------------
+// Bandeja de aprobación, conectada a la API real.
+//
+// El diseño llegó como artboards de un canvas, que no corren solos. Esta es la
+// versión funcional: mismo sistema de diseño (ds/), misma jerarquía visual y
+// los mismos atajos de teclado, pero sobre datos de verdad.
+//
+// Quien la usa pasa horas aquí, así que el teclado manda: el ratón es opcional.
+// ---------------------------------------------------------------------------
+
+const API = '/api';
+let pedidos = [];
+let filtro = 'todos';
+let indice = 0;
+
+const $ = id => document.getElementById(id);
+const pesos = n => '$' + (n ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const kilos = n => (n ?? 0).toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' kg';
+const escapar = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function avisar(texto, error = false) {
+  const el = $('aviso');
+  el.textContent = texto;
+  el.hidden = !texto;
+  el.style.background = error ? 'var(--status-danger-soft)' : 'var(--status-info-soft)';
+  el.style.color = error ? 'var(--status-danger)' : 'var(--status-info)';
+  if (texto && !error) setTimeout(() => { el.hidden = true; }, 4000);
+}
+
+const visibles = () => pedidos.filter(p =>
+  filtro === 'todos' ? true :
+  filtro === 'limpios' ? p.banderas.length === 0 : p.banderas.length > 0);
+
+async function cargar() {
+  try {
+    const r = await fetch(`${API}/bandeja`);
+    if (!r.ok) throw new Error(`El servidor respondió ${r.status}`);
+    pedidos = await r.json();
+  } catch (e) {
+    // Sin esto la pantalla se queda en blanco y nadie sabe por qué.
+    avisar(`No se pudo cargar la bandeja: ${e.message}`, true);
+    return;
+  }
+  indice = Math.min(indice, Math.max(0, visibles().length - 1));
+  pintar();
+}
+
+function pintar() {
+  const lista = visibles();
+  const total = lista.reduce((s, p) => s + p.total, 0);
+
+  $('resumen').textContent =
+    `${pedidos.length} por aprobar · ${pesos(total)} en pantalla`;
+  $('n-todos').textContent = pedidos.length;
+  $('n-limpios').textContent = pedidos.filter(p => !p.banderas.length).length;
+  $('n-banderas').textContent = pedidos.filter(p => p.banderas.length).length;
+
+  const limpios = pedidos.filter(p => !p.banderas.length).length;
+  $('lote').disabled = limpios === 0;
+  $('lote').firstChild.textContent = `Aprobar ${limpios} sin banderas `;
+
+  $('lista').innerHTML = lista.length ? lista.map((p, i) => `
+    <div class="fila" role="option" aria-selected="${i === indice}" data-i="${i}">
+      <span title="${escapar(p.banderas.map(b => b.detalle).join(' · '))}"
+            style="color:${p.banderas.some(b => b.nivel === 'alto') ? 'var(--status-danger)'
+                          : p.banderas.length ? 'var(--status-warning)' : 'var(--border-default)'}">
+        ${p.banderas.length ? '●' : '○'}
+      </span>
+      <span style="min-width:0">
+        <div style="font:var(--text-body-sm);color:var(--text-strong);
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${escapar(p.cliente_nombre || 'Cliente no registrado')}
+        </div>
+        <div class="mono" style="font:var(--text-caption);color:var(--text-muted)">
+          ${escapar(p.folio)} · ${escapar(p.canal)} · ${p.partidas.length} partidas
+        </div>
+      </span>
+      <span class="num">${pesos(p.total)}</span>
+    </div>`).join('')
+    : `<div class="vacio">
+         <div style="font:var(--text-body-md);color:var(--text-body)">Nada por aprobar en este filtro</div>
+         <div style="margin-top:6px">Los nuevos aparecen aquí en cuanto el agente cierra la llamada.</div>
+       </div>`;
+
+  $('lista').querySelectorAll('.fila').forEach(el =>
+    el.onclick = () => { indice = +el.dataset.i; pintar(); });
+
+  const sel = lista[indice];
+  $('detalle').innerHTML = sel ? detalleDe(sel) : '';
+  if (sel) {
+    $('btn-aprobar').onclick = () => resolver(sel, 'aprobar', false);
+    $('btn-corregido').onclick = () => resolver(sel, 'aprobar', true);
+    $('btn-rechazar').onclick = () => resolver(sel, 'rechazar');
+  }
+  $('lista').querySelector('[aria-selected="true"]')?.scrollIntoView({block: 'nearest'});
+}
+
+function detalleDe(p) {
+  const c = p.credito || {};
+  const despues = (c.disponible ?? 0) - p.total;
+
+  return `
+  <div style="font:var(--text-h4);color:var(--text-strong)">
+    ${escapar(p.cliente_nombre || 'Cliente no registrado')}
+  </div>
+  <div class="mono" style="font:var(--text-caption);color:var(--text-muted);margin-top:4px">
+    ${escapar(p.folio)} · ${escapar(p.canal)} · ${escapar(p.telefono || 'sin teléfono')}
+    ${p.vendedor ? ' · vendedor ' + escapar(p.vendedor) : ''}
+  </div>
+
+  ${p.banderas.length ? `<div style="margin-top:var(--space-5)">` + p.banderas.map(b =>
+      `<span class="bandera ${b.nivel}">${escapar(b.detalle)}</span>`).join('') + `</div>` : ''}
+
+  <table style="margin-top:var(--space-6)">
+    <thead><tr>
+      <th style="width:28px">#</th><th>Producto</th><th>Lo pidió así</th>
+      <th style="text-align:right">Cantidad</th><th style="text-align:right">Importe</th>
+    </tr></thead>
+    <tbody>${p.partidas.map(l => `
+      <tr>
+        <td class="mono" style="color:var(--text-muted)">${l.linea}</td>
+        <td>
+          <div style="color:var(--text-strong)">${escapar(l.descripcion)}</div>
+          <div class="mono" style="font:var(--text-caption);color:var(--text-muted)">${escapar(l.sku)}</div>
+        </td>
+        <td style="color:var(--text-muted);font-style:italic">${escapar(l.cantidad_texto || '—')}</td>
+        <td class="n">${kilos(l.cantidad_kg)}</td>
+        <td class="n" style="color:var(--text-strong)">${pesos(l.importe)}</td>
+      </tr>`).join('')}
+      <tr>
+        <td colspan="4" style="text-align:right;font:var(--text-label);color:var(--text-strong);border:0">TOTAL</td>
+        <td class="n" style="font:var(--text-label);color:var(--text-strong);border:0">${pesos(p.total)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  ${c.limite !== undefined ? `
+  <div style="margin-top:var(--space-6);padding:var(--space-5);background:var(--surface-sunken);
+              border-radius:var(--radius-card);display:flex;gap:var(--space-8);flex-wrap:wrap">
+    <div><div style="font:var(--text-caption);color:var(--text-muted)">Crédito disponible</div>
+         <div class="num" style="font:var(--text-body-md)">${pesos(c.disponible)}</div></div>
+    <div><div style="font:var(--text-caption);color:var(--text-muted)">Este pedido</div>
+         <div class="num" style="font:var(--text-body-md)">${pesos(p.total)}</div></div>
+    <div><div style="font:var(--text-caption);color:var(--text-muted)">Libre después</div>
+         <div class="num" style="font:var(--text-body-md);color:${despues < 0 ? 'var(--status-danger)' : 'var(--status-success)'}">
+           ${pesos(despues)}</div></div>
+  </div>` : ''}
+
+  ${p.observaciones ? `<div style="margin-top:var(--space-5);font:var(--text-body-sm)">
+      <span style="color:var(--text-muted)">Observaciones: </span>${escapar(p.observaciones)}</div>` : ''}
+
+  <div class="acciones">
+    <button id="btn-aprobar" class="aprobar">Aprobar <kbd style="background:rgba(255,255,255,.2);color:#fff">A</kbd></button>
+    <button id="btn-corregido">Aprobar con corrección <kbd>E</kbd></button>
+    <button id="btn-rechazar" class="rechazar">Rechazar <kbd>R</kbd></button>
+    ${p.conversacion_id ? `<a href="conversacion.html?id=${encodeURIComponent(p.conversacion_id)}"
+        style="align-self:center;margin-left:auto;color:var(--text-accent);font:var(--text-label)">
+        Ver la llamada →</a>` : ''}
+  </div>`;
+}
+
+async function resolver(p, accion, corregido = false) {
+  try {
+    const r = await fetch(`${API}/pedidos/${encodeURIComponent(p.folio)}/${accion}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(accion === 'aprobar' ? {corregido} : {motivo: 'rechazado en revisión'}),
+    });
+    const datos = await r.json();
+    if (!r.ok) throw new Error(datos.detail || `El servidor respondió ${r.status}`);
+    avisar(accion === 'aprobar'
+      ? `${p.folio} aprobado${datos.folio_erp ? ' — ERP ' + datos.folio_erp : ''}`
+      : `${p.folio} rechazado, material liberado`);
+  } catch (e) {
+    avisar(`No se pudo ${accion} ${p.folio}: ${e.message}`, true);
+  }
+  await cargar();
+}
+
+// -- Teclado: quien opera esto no suelta las manos del teclado ---------------
+addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea')) return;
+  const lista = visibles();
+  const sel = lista[indice];
+
+  if (e.key === 'ArrowDown') { indice = Math.min(indice + 1, lista.length - 1); pintar(); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { indice = Math.max(indice - 1, 0); pintar(); e.preventDefault(); }
+  else if (e.key.toLowerCase() === 'a' && e.shiftKey) { $('lote').click(); e.preventDefault(); }
+  else if (e.key.toLowerCase() === 'a' && sel) { resolver(sel, 'aprobar', false); e.preventDefault(); }
+  else if (e.key.toLowerCase() === 'e' && sel) { resolver(sel, 'aprobar', true); e.preventDefault(); }
+  else if (e.key.toLowerCase() === 'r' && sel) { resolver(sel, 'rechazar'); e.preventDefault(); }
+});
+
+$('filtros').onclick = e => {
+  const b = e.target.closest('button[data-filtro]');
+  if (!b) return;
+  filtro = b.dataset.filtro;
+  indice = 0;
+  $('filtros').querySelectorAll('button').forEach(x =>
+    x.setAttribute('aria-pressed', x === b));
+  pintar();
+};
+
+$('lote').onclick = async () => {
+  const limpios = pedidos.filter(p => !p.banderas.length);
+  if (!limpios.length) return;
+  // Se aprueban de uno en uno a propósito: si el ERP rechaza el tercero, los
+  // dos primeros ya quedaron y el aviso dice exactamente cuántos pasaron.
+  let ok = 0;
+  for (const p of limpios) {
+    const r = await fetch(`${API}/pedidos/${encodeURIComponent(p.folio)}/aprobar`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({corregido: false}),
+    });
+    if (r.ok) ok++;
+  }
+  avisar(`${ok} de ${limpios.length} pedidos aprobados y escritos al ERP`);
+  await cargar();
+};
+
+cargar();
+setInterval(cargar, 15000);  // llegan pedidos mientras alguien revisa
+</script>
+</body>
+</html>
