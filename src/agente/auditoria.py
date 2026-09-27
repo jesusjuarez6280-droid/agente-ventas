@@ -82,7 +82,10 @@ def registrar(conversacion_id: str, tipo: str, contenido: str | None = None,
 
 def transcripcion(conversacion_id: str) -> list[dict]:
     return db.consultar(
-        "SELECT secuencia, tipo, contenido, herramienta, entrada, salida,"
+        # turno_id va incluido: es la llave con la que cada partida del pedido
+        # apunta al momento de la conversacion donde se pidio. Sin el, el panel
+        # no puede enlazar el renglon con la frase que lo origino.
+        "SELECT turno_id, secuencia, tipo, contenido, herramienta, entrada, salida,"
         " latencia_ms, offset_audio_ms, creado_en FROM traza"
         " WHERE conversacion_id = ? ORDER BY secuencia",
         (conversacion_id,),

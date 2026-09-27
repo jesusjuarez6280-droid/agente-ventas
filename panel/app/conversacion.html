@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La llamada</title>
+<link rel="stylesheet" href="../ds/styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-page);color:var(--text-body);
+       height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{flex:none;display:flex;align-items:center;gap:var(--space-6);
+         padding:var(--space-5) var(--space-7);
+         border-bottom:1px solid var(--border-subtle);background:var(--surface-card)}
+
+  .cuerpo{flex:1;min-height:0;display:flex}
+  .charla{flex:1 1 55%;min-width:0;overflow:auto;padding:var(--space-6) var(--space-7);
+          border-right:1px solid var(--border-subtle)}
+  .pedido{flex:1 1 45%;min-width:0;overflow:auto;padding:var(--space-6) var(--space-7);
+          background:var(--surface-card)}
+
+  .turno{display:flex;gap:var(--space-5);margin-bottom:var(--space-5);
+         padding:var(--space-4) var(--space-5);border-radius:var(--radius-card);
+         transition:background .15s, box-shadow .15s}
+  .quien{flex:none;width:62px;font:var(--text-caption);color:var(--text-muted);
+         padding-top:2px}
+  .dicho{flex:1;min-width:0;font:var(--text-body-sm)}
+  .cliente .dicho{color:var(--text-strong)}
+  .agente .dicho{color:var(--text-body)}
+
+  /* El resalte: es la razon de ser de esta pantalla. */
+  .turno.resaltado{background:var(--status-warning-soft);
+                   box-shadow:inset 3px 0 0 var(--status-warning)}
+
+  .consulta{display:flex;gap:var(--space-5);margin:0 0 var(--space-4) 0;
+            font:var(--text-caption);color:var(--text-muted)}
+  .consulta .quien{width:62px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;
+        border-radius:var(--radius-pill);background:var(--surface-sunken);
+        font-family:var(--font-mono,ui-monospace,monospace);font-size:11px}
+
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font:var(--text-caption);color:var(--text-muted);font-weight:500;
+     padding:6px var(--space-4);border-bottom:1px solid var(--border-subtle)}
+  td{padding:9px var(--space-4);border-bottom:1px solid var(--border-subtle);
+     font:var(--text-body-sm);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  tr.partida{cursor:pointer;transition:background .15s}
+  tr.partida:hover{background:var(--status-warning-soft)}
+
+  .origen{font:var(--text-caption);color:var(--text-muted);font-style:italic;
+          margin-top:3px}
+
+  .mono{font-family:var(--font-mono,ui-monospace,monospace);font-variant-numeric:tabular-nums}
+  .nota{padding:var(--space-5);border-radius:var(--radius-card);
+        background:var(--status-info-soft);color:var(--status-info);
+        font:var(--text-caption);margin-bottom:var(--space-6)}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" style="color:var(--text-accent);font:var(--text-label);
+     text-decoration:none">← Bandeja</a>
+  <div>
+    <div id="titulo" style="font:var(--text-h4);color:var(--text-strong)">La llamada</div>
+    <div id="meta" class="mono" style="font:var(--text-caption);color:var(--text-muted)"></div>
+  </div>
+</header>
+
+<div class="cuerpo">
+  <section class="charla" id="charla"></section>
+  <section class="pedido" id="pedido"></section>
+</div>
+
+<script type="module">
+// ---------------------------------------------------------------------------
+// La llamada, con el pedido enlazado renglón por renglón.
+//
+// Esto no es una maqueta: cada turno sale de la tabla `traza` y cada partida
+// guarda el `turno_id` de la frase que la originó. Al pasar el cursor sobre un
+// renglón del pedido se resalta, en la transcripción, el momento exacto en que
+// el cliente lo pidió.
+//
+// Ese enlace es lo que resuelve una disputa. Cuando alguien reclama "yo pedí
+// doscientos, no cien", se abre el renglón y ahí está lo que dijo — y en una
+// llamada de voz, el milisegundo del audio donde lo dijo.
+// ---------------------------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const pesos = n => '$' + (n ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const kilos = n => (n ?? 0).toLocaleString('es-MX', {maximumFractionDigits: 0}) + ' kg';
+const escapar = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let token = null;
+try { token = sessionStorage.getItem('token'); } catch {}
+
+const id = new URLSearchParams(location.search).get('id');
+
+async function cargar() {
+  if (!token) { location.href = 'index.html'; return; }
+
+  // Sin id, se abre la conversación más reciente: así la pantalla sirve
+  // aunque se llegue a ella directo, sin pasar por la bandeja.
+  let conversacionId = id;
+  if (!conversacionId) {
+    const r = await fetch('/api/conversaciones?limite=1',
+      {headers: {'Authorization': 'Bearer ' + token}});
+    if (!r.ok) { location.href = 'index.html'; return; }
+    const lista = await r.json();
+    if (!lista.length) { $('charla').innerHTML = '<div class="nota">Todavía no hay llamadas registradas.</div>'; return; }
+    conversacionId = lista[0].conversacion_id;
+  }
+
+  const r = await fetch(`/api/conversaciones/${encodeURIComponent(conversacionId)}`,
+    {headers: {'Authorization': 'Bearer ' + token}});
+  if (r.status === 401) { location.href = 'index.html'; return; }
+  if (!r.ok) { $('charla').innerHTML = '<div class="nota">No se encontró esa llamada.</div>'; return; }
+
+  pintar(await r.json());
+}
+
+function pintar(datos) {
+  const {conversacion, turnos, pedido} = datos;
+
+  $('titulo').textContent = conversacion.canal === 'voz' ? 'Llamada telefónica' : `Conversación por ${conversacion.canal}`;
+  $('meta').textContent =
+    `${conversacion.conversacion_id} · ${conversacion.telefono || 'sin número'} · ` +
+    `${turnos.length} turnos · ${turnos.filter(t => t.tipo === 'herramienta').length} consultas al sistema`;
+
+  // --- La transcripción --------------------------------------------------
+  $('charla').innerHTML = turnos.map(t => {
+    if (t.tipo === 'herramienta') {
+      return `<div class="consulta">
+        <span class="quien"></span>
+        <span><span class="chip">${escapar(t.herramienta)}</span>
+          <span style="margin-left:8px">${t.latencia_ms ?? 0} ms</span></span>
+      </div>`;
+    }
+    if (t.tipo === 'sistema') return '';
+    const quien = t.tipo === 'cliente' ? 'CLIENTE' : 'AGENTE';
+    return `<div class="turno ${t.tipo}" data-turno="${escapar(t.turno_id || '')}"
+                 id="turno-${t.secuencia}">
+      <span class="quien">${quien}</span>
+      <span class="dicho">${escapar(t.contenido)}</span>
+    </div>`;
+  }).join('');
+
+  // --- El pedido que salió de ahí ----------------------------------------
+  if (!pedido || !pedido.partidas?.length) {
+    $('pedido').innerHTML = '<div class="nota">Esta conversación no levantó pedido.</div>';
+    return;
+  }
+
+  $('pedido').innerHTML = `
+    <div style="font:var(--text-h4);color:var(--text-strong)">${escapar(pedido.folio)}</div>
+    <div class="mono" style="font:var(--text-caption);color:var(--text-muted);margin-bottom:var(--space-5)">
+      ${escapar(pedido.estado)} · ${pedido.partidas.length} partidas
+    </div>
+
+    <div class="nota">
+      Pasa el cursor sobre un renglón: se resalta, en la transcripción,
+      la frase donde el cliente lo pidió.
+    </div>
+
+    <table>
+      <thead><tr>
+        <th style="width:26px">#</th><th>Producto y frase de origen</th>
+        <th style="text-align:right">Cantidad</th><th style="text-align:right">Importe</th>
+      </tr></thead>
+      <tbody>${pedido.partidas.map(p => `
+        <tr class="partida" data-turno="${escapar(p.turno_id || '')}">
+          <td class="mono" style="color:var(--text-muted)">${p.linea}</td>
+          <td>
+            <div style="color:var(--text-strong)">${escapar(p.descripcion)}</div>
+            ${p.frase_origen ? `<div class="origen">"${escapar(p.frase_origen)}"</div>` : ''}
+            ${p.offset_audio_ms != null
+              ? `<div class="mono" style="font:var(--text-caption);color:var(--text-accent);margin-top:3px">
+                   audio en ${(p.offset_audio_ms / 1000).toFixed(1)} s</div>` : ''}
+          </td>
+          <td class="n">${kilos(p.cantidad_kg)}<div class="origen">${escapar(p.cantidad_texto || '')}</div></td>
+          <td class="n" style="color:var(--text-strong)">${pesos(p.importe)}</td>
+        </tr>`).join('')}
+        <tr>
+          <td colspan="3" style="text-align:right;font:var(--text-label);color:var(--text-strong);border:0">TOTAL</td>
+          <td class="n" style="font:var(--text-label);color:var(--text-strong);border:0">${pesos(pedido.total)}</td>
+        </tr>
+      </tbody>
+    </table>`;
+
+  // --- El enlace entre las dos columnas ----------------------------------
+  for (const fila of document.querySelectorAll('tr.partida')) {
+    const turno = fila.dataset.turno;
+    const destino = turno && document.querySelector(`.turno[data-turno="${turno}"]`);
+    if (!destino) continue;
+    fila.addEventListener('mouseenter', () => {
+      destino.classList.add('resaltado');
+      destino.scrollIntoView({block: 'center', behavior: 'smooth'});
+    });
+    fila.addEventListener('mouseleave', () => destino.classList.remove('resaltado'));
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>

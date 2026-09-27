@@ -66,11 +66,15 @@ async def capturar() -> None:
             await detalle.screenshot(path=SALIDA / "3-detalle-del-pedido.png")
             print("  3-detalle-del-pedido.png")
 
-        # --- 4. Con el filtro de banderas --------------------------------
-        await pagina.click('button[data-filtro="banderas"]')
-        await pagina.wait_for_timeout(600)
-        await pagina.screenshot(path=SALIDA / "4-filtro-banderas.png")
-        print("  4-filtro-banderas.png")
+        # --- 4. La llamada, con el pedido enlazado a lo que se dijo -------
+        # Se deja el cursor sobre un renglon para que el resalte salga en la
+        # captura: ese enlace entre las dos columnas es lo que hay que ensenar.
+        await pagina.goto(f"{BASE}/panel/app/conversacion.html")
+        await pagina.wait_for_selector("tr.partida", timeout=15000)
+        await pagina.hover("tr.partida")
+        await pagina.wait_for_timeout(900)
+        await pagina.screenshot(path=SALIDA / "4-llamada-con-trazabilidad.png")
+        print("  4-llamada-con-trazabilidad.png")
 
         await navegador.close()
 

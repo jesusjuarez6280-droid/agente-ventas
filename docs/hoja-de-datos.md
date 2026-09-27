@@ -98,6 +98,20 @@ pedí doscientos, no cien"*, se abre el renglón y suena su propia voz.
 
 ---
 
+## Qué pantallas están conectadas y cuáles no
+
+Importa para no enseñar un boceto como si funcionara:
+
+| Pantalla | Estado |
+|---|---|
+| `panel/app/index.html` — Bandeja de aprobación | **Conectada.** Lee de `/api/bandeja`, aprueba contra el ERP |
+| `panel/app/conversacion.html` — La llamada | **Conectada.** Transcripción real desde la tabla `traza`, con cada partida enlazada a la frase que la originó |
+| `panel/*.dc.html` — Tablero, Catálogo, Inventario, En Vivo | **Bocetos de diseño.** Cero llamadas a la API; los diálogos que muestran están escritos a mano |
+
+Las capturas de `docs/capturas/` salen de las dos pantallas conectadas, con datos
+que generó el sistema. **En Vivo no se debe presentar como funcional**: es un
+boceto, y el diálogo que aparece ahí nunca lo produjo el agente.
+
 ## Qué NO se puede afirmar de este proyecto
 
 Para no exagerar:
