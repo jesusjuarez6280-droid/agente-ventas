@@ -71,6 +71,13 @@
          padding:var(--space-4) var(--space-7);border-top:1px solid var(--border-subtle);
          font:var(--text-caption);color:var(--text-muted);background:var(--surface-card)}
 
+  /* El overlay del login se declara aqui, no en el atributo style: un
+     display en linea le gana al atributo hidden y el overlay se queda
+     encima tragandose los clics de toda la pantalla aunque no se vea. */
+  #login{position:fixed;inset:0;z-index:50;display:flex;
+         align-items:center;justify-content:center;background:var(--surface-page)}
+  #login[hidden]{display:none}
+
   .vacio{padding:var(--space-10) var(--space-7);text-align:center;color:var(--text-muted)}
   .aviso{padding:var(--space-4) var(--space-7);font:var(--text-caption);
          background:var(--status-info-soft);color:var(--status-info);flex:none}
@@ -78,8 +85,7 @@
 </head>
 <body>
 
-<div id="login" hidden style="position:fixed;inset:0;z-index:50;display:flex;
-     align-items:center;justify-content:center;background:var(--surface-page)">
+<div id="login" hidden>
   <form id="form-login" onsubmit="return false" style="width:340px;padding:var(--space-8);background:var(--surface-card);
         border:1px solid var(--border-subtle);border-radius:var(--radius-card);
         box-shadow:var(--shadow-raised);display:flex;flex-direction:column;gap:var(--space-5)">

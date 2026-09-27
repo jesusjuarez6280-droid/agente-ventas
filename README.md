@@ -38,6 +38,12 @@ Y el núcleo entero, verificado:
 python scripts/probar_nucleo.py
 ```
 
+![Bandeja de aprobación](docs/capturas/2-bandeja.png)
+
+La IA levanta el pedido; una persona lo suelta al ERP con una tecla. La columna
+*"Lo pidió así"* guarda las palabras del cliente junto a la cantidad ya
+convertida — cuando alguien reclame *"yo pedí doscientos"*, ahí está lo que dijo.
+
 ## Los problemas que resuelve
 
 Lo difícil de esto no es que la IA hable. Es otra cosa:
@@ -77,9 +83,14 @@ consulta, y streaming al sintetizador.
 Funcionando y verificado: catálogo, inventario con reservas que vencen, pedidos,
 idempotencia, métricas, panel con autenticación, y los tres proveedores.
 
-Sin cerrar todavía: dinero en `float` en vez de `Decimal`, verificación de que lo
-que el modelo *dice* coincide con lo que las herramientas devolvieron, y firma de
-los webhooks de telefonía. Están documentados en
+Sin cerrar todavía: dinero en `float` en vez de `Decimal`, y verificación de que
+lo que el modelo *dice* coincide con lo que las herramientas devolvieron.
+
+**El canal de voz no se ha ejercitado contra llamadas reales.** El código de
+Twilio ConversationRelay está escrito, pero probarlo exige exponer la máquina a
+internet con un túnel y firmar los webhooks entrantes — configuración de
+despliegue que este repositorio deliberadamente no incluye. Todo lo demás corre
+igual sobre WhatsApp o texto, y la demostración sin llave lo prueba. Están documentados en
 [docs/prompt-auditoria.md](docs/prompt-auditoria.md).
 
 ---
