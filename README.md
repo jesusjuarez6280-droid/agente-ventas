@@ -450,3 +450,27 @@ Lo que sigue, en orden:
 3. Twilio + un número + túnel, y hacer la primera llamada de verdad
 4. Bandeja de aprobación con interfaz, no solo API
 5. Adaptador del ERP real, cuando se defina cuál
+
+---
+
+## Licencia y uso
+
+© 2026 Jesús Armando Juárez Cabrera. Todos los derechos reservados.
+
+Este repositorio se publica con fines de **demostración técnica y portafolio**.
+Puedes leerlo, clonarlo y correrlo para evaluarlo. **No** se otorga licencia
+para usarlo en un producto o servicio, redistribuirlo ni explotarlo
+comercialmente sin autorización escrita del autor.
+
+Los términos completos están en [LICENSE](LICENSE).
+
+## Datos personales
+
+El sistema trata datos de clientes —nombres, teléfonos, líneas de crédito— y
+graba y transcribe llamadas. [docs/aviso-de-privacidad.md](docs/aviso-de-privacidad.md)
+documenta exactamente qué dato vive en qué tabla, qué terceros lo reciben, y qué
+le falta al sistema para operar en cumplimiento con datos reales.
+
+Incluye una advertencia que conviene leer antes de conectar nada: **los niveles
+gratuitos de los proveedores de modelos suelen usar los datos para entrenar**, y
+por eso no sirven para datos de clientes reales.

@@ -1,0 +1,83 @@
+Copyright © 2026 Jesús Armando Juárez Cabrera. Todos los derechos reservados.
+Copyright © 2026 Jesús Armando Juárez Cabrera. All rights reserved.
+
+================================================================================
+ESPAÑOL
+================================================================================
+
+Este repositorio se publica con fines de demostración técnica y portafolio
+profesional. El código es obra del autor y NO se distribuye bajo una licencia
+de código abierto.
+
+LO QUE SÍ PUEDES HACER
+
+  - Leer, revisar y estudiar el código.
+  - Clonarlo y ejecutarlo en tu propio equipo para evaluarlo, incluida la
+    demostración que corre sin llaves de API.
+  - Citarlo o enlazarlo al comentar el trabajo del autor.
+
+LO QUE NO PUEDES HACER SIN AUTORIZACIÓN ESCRITA DEL AUTOR
+
+  - Usarlo, total o parcialmente, en un producto o servicio propio o de un
+    tercero, sea comercial o gratuito.
+  - Copiarlo, modificarlo o crear obras derivadas para distribuirlas.
+  - Redistribuirlo, sublicenciarlo, venderlo u ofrecerlo como servicio.
+  - Usarlo dentro de una organización para operar o apoyar su actividad.
+
+El autor se reserva el derecho de explotar esta obra comercialmente, incluida
+su oferta como servicio.
+
+Para solicitar una licencia de uso, contacta al autor.
+
+SIN GARANTÍA
+
+El software se entrega "tal cual", sin garantía de ningún tipo, expresa o
+implícita. El autor no responde por daños derivados de su uso.
+
+COMPONENTES DE TERCEROS
+
+Este proyecto depende de bibliotecas y recursos de terceros que conservan sus
+propias licencias y no quedan cubiertos por este aviso: entre otros, FastAPI,
+Uvicorn, Pydantic, PyYAML, los SDK de Anthropic y Google GenAI, las tipografías
+Plus Jakarta Sans y JetBrains Mono (SIL Open Font License) y los iconos
+Phosphor (MIT).
+
+================================================================================
+ENGLISH
+================================================================================
+
+This repository is published for technical demonstration and professional
+portfolio purposes. The code is the author's work and is NOT released under an
+open source license.
+
+YOU MAY
+
+  - Read, review and study the code.
+  - Clone and run it on your own machine to evaluate it, including the demo
+    that runs without API keys.
+  - Cite or link to it when discussing the author's work.
+
+YOU MAY NOT, WITHOUT THE AUTHOR'S WRITTEN PERMISSION
+
+  - Use it, in whole or in part, in your own or a third party's product or
+    service, whether commercial or free.
+  - Copy, modify or create derivative works for distribution.
+  - Redistribute, sublicense, sell or offer it as a service.
+  - Use it within an organization to operate or support its activity.
+
+The author reserves the right to commercially exploit this work, including
+offering it as a service.
+
+To request a usage license, contact the author.
+
+NO WARRANTY
+
+The software is provided "as is", without warranty of any kind, express or
+implied. The author is not liable for any damages arising from its use.
+
+THIRD-PARTY COMPONENTS
+
+This project depends on third-party libraries and assets that retain their own
+licenses and are not covered by this notice, including FastAPI, Uvicorn,
+Pydantic, PyYAML, the Anthropic and Google GenAI SDKs, the Plus Jakarta Sans
+and JetBrains Mono typefaces (SIL Open Font License) and Phosphor icons (MIT).
