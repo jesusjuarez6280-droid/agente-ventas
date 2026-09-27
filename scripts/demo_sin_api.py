@@ -89,6 +89,11 @@ async def main() -> None:
         if sesion.terminada or sesion.escalada:
             break
 
+    # Se cuelga de verdad. Si la conversacion queda abierta, la pantalla de
+    # llamadas en curso la sigue mostrando como si el cliente siguiera en la
+    # linea — y una pantalla que ensena llamadas que ya terminaron miente.
+    auditoria.cerrar_conversacion(conversacion_id, "fin de la demostracion")
+
     print("\n" + "=" * 76)
     if sesion.folio:
         datos = pedidos.resumen(sesion.folio)

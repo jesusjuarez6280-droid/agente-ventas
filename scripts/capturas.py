@@ -76,6 +76,19 @@ async def capturar() -> None:
         await pagina.screenshot(path=SALIDA / "4-llamada-con-trazabilidad.png")
         print("  4-llamada-con-trazabilidad.png")
 
+        # --- 5. Llamadas en curso, capturadas mientras de verdad corren ---
+        # El script de llamadas arranca aparte; aqui solo se espera a que la
+        # pantalla las reporte. Si no hubiera llamadas, la captura saldria
+        # vacia — que es justo lo que debe pasar.
+        await pagina.goto(f"{BASE}/panel/app/envivo.html")
+        try:
+            await pagina.wait_for_selector("article.llamada", timeout=30000)
+            await pagina.wait_for_timeout(9000)  # que avancen y armen pedido
+            await pagina.screenshot(path=SALIDA / "5-llamadas-en-curso.png")
+            print("  5-llamadas-en-curso.png")
+        except Exception:
+            print("  5-llamadas-en-curso.png  (omitida: no habia llamadas activas)")
+
         await navegador.close()
 
 
@@ -88,13 +101,23 @@ def main() -> None:
          "--port", str(PUERTO), "--app-dir", "src"],
         cwd=RAIZ, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
+    # Las llamadas corren en paralelo a la captura: la pantalla de En Vivo
+    # tiene que fotografiarse con llamadas de verdad en curso, no montadas.
+    llamadas = subprocess.Popen(
+        [sys.executable, "scripts/llamadas_en_curso.py", "4", "--lento"],
+        cwd=RAIZ, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
     try:
         time.sleep(6)
         print("Capturando:")
         asyncio.run(capturar())
     finally:
-        servidor.terminate()
-        servidor.wait(timeout=10)
+        for proceso in (llamadas, servidor):
+            proceso.terminate()
+            try:
+                proceso.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                proceso.kill()
 
     print()
     print(f"Listas en {SALIDA}")

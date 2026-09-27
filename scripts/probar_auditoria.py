@@ -257,6 +257,8 @@ check("le dice algo al cliente en vez de dejarlo en silencio", bool(dicho),
       "".join(dicho))
 check("y marca la llamada para pasarla a una persona", ses.escalada,
       ses.motivo_escalamiento or "")
+auditoria.cerrar_conversacion(conv_fallo, "fin de la prueba")
+
 check(
     "el fallo queda en la traza para poder depurarlo",
     any("Fallo del modelo" in (t["contenido"] or "")

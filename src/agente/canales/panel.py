@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -42,6 +43,9 @@ _origenes = [o.strip() for o in os.getenv("ORIGENES_PANEL", "").split(",") if o.
 # de miles de pesos, y la bandeja expone nombres, telefonos y lineas de credito
 # de clientes: ninguna de las dos cosas puede quedar abierta al puerto.
 # ---------------------------------------------------------------------------
+
+# Sin senal en este tiempo, la llamada se da por caida y deja de listarse.
+MINUTOS_SIN_SENAL = 3
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -244,6 +248,64 @@ def rechazar(folio: str, cuerpo: Rechazo | None = None,
 # ---------------------------------------------------------------------------
 # Detalle de conversacion
 # ---------------------------------------------------------------------------
+
+@app.get("/api/conversaciones/en-curso", tags=["conversaciones"])
+def en_curso(sesion: dict = Depends(sesion_actual)) -> list[dict]:
+    """Las conversaciones que estan ocurriendo ahora mismo.
+
+    Sale de datos vivos: la tabla `conversaciones` marca estado 'abierta'
+    mientras la llamada corre, y cada turno aterriza en `traza` conforme
+    ocurre. Aqui se leen las dos, mas el borrador que se esta armando.
+
+    No hay nada precocinado: si no hay llamadas en curso, esto devuelve una
+    lista vacia — que es lo correcto, y es la diferencia entre una pantalla
+    y una maqueta.
+    """
+    # Una conversacion sin turnos nuevos en varios minutos es una llamada que
+    # se corto sin avisar: el proceso murio, la red fallo, alguien colgo y el
+    # cierre nunca llego. Mostrarla como si el cliente siguiera en la linea es
+    # exactamente lo que vuelve mentirosa a una pantalla de tiempo real.
+    corte = (
+        datetime.now(timezone.utc) - timedelta(minutes=MINUTOS_SIN_SENAL)
+    ).isoformat(timespec="seconds")
+
+    abiertas = db.consultar(
+        """
+        SELECT cv.conversacion_id, cv.canal, cv.telefono, cv.cliente_id,
+               cv.iniciada_en, c.nombre AS cliente_nombre, c.vendedor,
+               (SELECT MAX(creado_en) FROM traza t
+                 WHERE t.conversacion_id = cv.conversacion_id) AS ultima_senal
+        FROM conversaciones cv
+        LEFT JOIN clientes c ON c.tenant = cv.tenant AND c.cliente_id = cv.cliente_id
+        WHERE cv.tenant = ? AND cv.estado = 'abierta'
+          AND COALESCE((SELECT MAX(creado_en) FROM traza t
+                         WHERE t.conversacion_id = cv.conversacion_id),
+                       cv.iniciada_en) >= ?
+        ORDER BY cv.iniciada_en DESC
+        """,
+        (CFG.tenant, corte),
+    )
+
+    salida = []
+    for cv in abiertas:
+        turnos = db.consultar(
+            "SELECT turno_id, secuencia, tipo, contenido, herramienta, latencia_ms,"
+            " creado_en FROM traza WHERE conversacion_id = ? ORDER BY secuencia",
+            (cv["conversacion_id"],),
+        )
+        borrador = db.uno(
+            "SELECT folio FROM pedidos WHERE conversacion_id = ? AND estado = 'borrador'",
+            (cv["conversacion_id"],),
+        )
+        salida.append({
+            **cv,
+            "turnos": turnos,
+            "consultas": sum(1 for t in turnos if t["tipo"] == "herramienta"),
+            # El pedido se va armando renglon por renglon mientras hablan.
+            "pedido": pedidos.resumen(borrador["folio"]) if borrador else None,
+        })
+    return salida
+
 
 @app.get("/api/conversaciones/{conversacion_id}", tags=["conversaciones"])
 def conversacion(conversacion_id: str,

@@ -107,12 +107,15 @@ async function cargar() {
   // aunque se llegue a ella directo, sin pasar por la bandeja.
   let conversacionId = id;
   if (!conversacionId) {
-    const r = await fetch('/api/conversaciones?limite=1',
+    const r = await fetch('/api/conversaciones?limite=30',
       {headers: {'Authorization': 'Bearer ' + token}});
     if (!r.ok) { location.href = 'index.html'; return; }
     const lista = await r.json();
-    if (!lista.length) { $('charla').innerHTML = '<div class="nota">Todavía no hay llamadas registradas.</div>'; return; }
-    conversacionId = lista[0].conversacion_id;
+    // La más reciente QUE HAYA LEVANTADO PEDIDO: es la que tiene algo que
+    // enlazar. Una conversación sin pedido deja media pantalla vacía.
+    const conPedido = lista.find(c => c.folio) || lista[0];
+    if (!conPedido) { $('charla').innerHTML = '<div class="nota">Todavía no hay llamadas registradas.</div>'; return; }
+    conversacionId = conPedido.conversacion_id;
   }
 
   const r = await fetch(`/api/conversaciones/${encodeURIComponent(conversacionId)}`,

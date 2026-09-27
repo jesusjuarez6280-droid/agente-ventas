@@ -106,11 +106,22 @@ Importa para no enseñar un boceto como si funcionara:
 |---|---|
 | `panel/app/index.html` — Bandeja de aprobación | **Conectada.** Lee de `/api/bandeja`, aprueba contra el ERP |
 | `panel/app/conversacion.html` — La llamada | **Conectada.** Transcripción real desde la tabla `traza`, con cada partida enlazada a la frase que la originó |
-| `panel/*.dc.html` — Tablero, Catálogo, Inventario, En Vivo | **Bocetos de diseño.** Cero llamadas a la API; los diálogos que muestran están escritos a mano |
+| `panel/app/envivo.html` — Llamadas en curso | **Conectada.** Lee `/api/conversaciones/en-curso`: conversaciones con estado `abierta` y sus turnos conforme aterrizan en `traza`. Sin llamadas activas muestra la pantalla vacía, que es lo correcto |
+| `panel/*.dc.html` — Tablero, Catálogo, Inventario | **Bocetos de diseño.** Cero llamadas a la API |
 
-Las capturas de `docs/capturas/` salen de las dos pantallas conectadas, con datos
-que generó el sistema. **En Vivo no se debe presentar como funcional**: es un
-boceto, y el diálogo que aparece ahí nunca lo produjo el agente.
+Las capturas de `docs/capturas/` salen de las tres pantallas conectadas, con
+datos que generó el sistema. Ninguna frase de las que aparecen está escrita a
+mano: todas las produjo el agente consultando el catálogo y el inventario.
+
+**Sobre la captura de llamadas en curso:** las llamadas son reales y están
+ocurriendo mientras se toma la foto — el agente consulta inventario de verdad y
+arma pedidos de verdad. Lo simulado es el lado del cliente, cuyas frases vienen
+de un guion, igual que si alguien las tecleara en el canal de texto
+(`scripts/llamadas_en_curso.py`). No hay telefonía de por medio.
+
+La pantalla descarta llamadas sin señal en tres minutos: una conversación que se
+cortó sin avisar deja de listarse en vez de aparecer como si el cliente siguiera
+en la línea.
 
 ## Qué NO se puede afirmar de este proyecto
 

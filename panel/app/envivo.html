@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Llamadas en curso</title>
+<link rel="stylesheet" href="../ds/styles.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-page);color:var(--text-body);
+       height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+  header{flex:none;display:flex;align-items:center;gap:var(--space-6);
+         padding:var(--space-5) var(--space-7);
+         border-bottom:1px solid var(--border-subtle);background:var(--surface-card)}
+
+  /* El punto que late: solo aparece cuando hay llamadas de verdad. */
+  .vivo{display:inline-flex;align-items:center;gap:7px;padding:3px 10px;
+        border-radius:var(--radius-pill);background:var(--status-danger-soft);
+        color:var(--status-danger);font:var(--text-caption)}
+  .punto{width:7px;height:7px;border-radius:50%;background:currentColor;
+         animation:latir 1.6s ease-in-out infinite}
+  @keyframes latir{0%,100%{opacity:1}50%{opacity:.25}}
+
+  .tablero{flex:1;min-height:0;overflow:auto;padding:var(--space-6);
+           display:grid;gap:var(--space-6);
+           grid-template-columns:repeat(auto-fill,minmax(430px,1fr));
+           align-content:start}
+
+  .llamada{background:var(--surface-card);border:1px solid var(--border-subtle);
+           border-radius:var(--radius-card);overflow:hidden;
+           display:flex;flex-direction:column;max-height:560px}
+  .cabeza{flex:none;padding:var(--space-5);border-bottom:1px solid var(--border-subtle);
+          display:flex;align-items:center;gap:var(--space-5)}
+  .charla{flex:1;min-height:0;overflow:auto;padding:var(--space-5);
+          display:flex;flex-direction:column;gap:var(--space-4)}
+
+  .turno{display:flex;gap:var(--space-4);font:var(--text-body-sm);
+         animation:entra .3s ease-out}
+  @keyframes entra{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .quien{flex:none;width:54px;font:var(--text-caption);color:var(--text-muted);padding-top:2px}
+  .cliente .dicho{color:var(--text-strong)}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;
+        border-radius:var(--radius-pill);background:var(--surface-sunken);
+        font-family:var(--font-mono,ui-monospace,monospace);font-size:11px;
+        color:var(--text-muted)}
+
+  .partidas{flex:none;padding:var(--space-4) var(--space-5);
+            background:var(--surface-sunken);border-top:1px solid var(--border-subtle);
+            font:var(--text-caption)}
+  .renglon{display:flex;justify-content:space-between;gap:var(--space-5);padding:2px 0}
+  .mono{font-family:var(--font-mono,ui-monospace,monospace);font-variant-numeric:tabular-nums}
+
+  .vacio{grid-column:1/-1;padding:var(--space-12) var(--space-7);text-align:center;
+         color:var(--text-muted)}
+  .vacio code{display:inline-block;margin-top:var(--space-5);padding:8px 14px;
+              background:var(--surface-sunken);border-radius:var(--radius-md);
+              font-family:var(--font-mono,ui-monospace,monospace);font-size:12px;
+              color:var(--text-body)}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" style="color:var(--text-accent);font:var(--text-label);
+     text-decoration:none">← Bandeja</a>
+  <div>
+    <div style="font:var(--text-h4);color:var(--text-strong)">Llamadas en curso</div>
+    <div id="meta" class="mono" style="font:var(--text-caption);color:var(--text-muted)"></div>
+  </div>
+  <div style="flex:1"></div>
+  <div id="indicador"></div>
+</header>
+
+<div class="tablero" id="tablero"></div>
+
+<script type="module">
+// ---------------------------------------------------------------------------
+// Las llamadas que están ocurriendo ahora.
+//
+// Esta pantalla no tiene ni una frase escrita a mano: todo lo que se ve sale
+// de /api/conversaciones/en-curso, que lee las conversaciones con estado
+// 'abierta' y sus turnos de la tabla `traza` conforme aterrizan.
+//
+// Si no hay llamadas, no muestra nada — y eso es lo correcto. Una pantalla que
+// enseña una conversación cuando no hay ninguna es una maqueta, no un panel.
+// ---------------------------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const pesos = n => '$' + (n ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const escapar = s => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let token = null;
+try { token = sessionStorage.getItem('token'); } catch {}
+if (!token) location.href = 'index.html';
+
+const desde = iso => {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+};
+
+async function tick() {
+  let llamadas;
+  try {
+    const r = await fetch('/api/conversaciones/en-curso',
+      {headers: {'Authorization': 'Bearer ' + token}});
+    if (r.status === 401) { location.href = 'index.html'; return; }
+    llamadas = await r.json();
+  } catch {
+    return;  // un tropiezo de red no debe vaciar la pantalla
+  }
+
+  $('meta').textContent = llamadas.length
+    ? `${llamadas.length} en línea · ${llamadas.reduce((s, l) => s + l.consultas, 0)} consultas al sistema`
+    : 'ninguna llamada activa';
+  $('indicador').innerHTML = llamadas.length
+    ? `<span class="vivo"><span class="punto"></span>EN VIVO</span>` : '';
+
+  if (!llamadas.length) {
+    $('tablero').innerHTML = `<div class="vacio">
+      <div style="font:var(--text-body-md);color:var(--text-body)">No hay llamadas en curso</div>
+      <div style="margin-top:6px">Esta pantalla solo muestra conversaciones reales.
+        Para ver el sistema trabajando, levanta unas:</div>
+      <code>python scripts/llamadas_en_curso.py 3</code>
+    </div>`;
+    return;
+  }
+
+  $('tablero').innerHTML = llamadas.map(l => {
+    const turnos = l.turnos.filter(t => t.tipo === 'cliente' || t.tipo === 'agente');
+    const ultimas = turnos.slice(-6);
+    const consultas = l.turnos.filter(t => t.tipo === 'herramienta').slice(-3);
+
+    return `<article class="llamada">
+      <div class="cabeza">
+        <span class="vivo"><span class="punto"></span></span>
+        <div style="flex:1;min-width:0">
+          <div style="font:var(--text-label);color:var(--text-strong)">
+            ${escapar(l.cliente_nombre || 'Número no registrado')}
+          </div>
+          <div class="mono" style="font:var(--text-caption);color:var(--text-muted)">
+            ${escapar(l.telefono || '')} · ${escapar(l.canal)} · ${l.consultas} consultas
+          </div>
+        </div>
+        <span class="mono" style="font:var(--text-caption);color:var(--text-muted)">
+          ${desde(l.iniciada_en)}
+        </span>
+      </div>
+
+      <div class="charla">
+        ${ultimas.map(t => `<div class="turno ${t.tipo}">
+          <span class="quien">${t.tipo === 'cliente' ? 'CLIENTE' : 'AGENTE'}</span>
+          <span class="dicho">${escapar(t.contenido)}</span>
+        </div>`).join('')}
+        ${consultas.length ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">
+          ${consultas.map(c => `<span class="chip">${escapar(c.herramienta)} ${c.latencia_ms ?? 0}ms</span>`).join('')}
+        </div>` : ''}
+      </div>
+
+      ${l.pedido?.partidas?.length ? `<div class="partidas">
+        <div style="color:var(--text-muted);margin-bottom:4px">
+          Pedido armándose · ${escapar(l.pedido.folio)}
+        </div>
+        ${l.pedido.partidas.map(p => `<div class="renglon">
+          <span style="color:var(--text-strong);overflow:hidden;text-overflow:ellipsis;
+                       white-space:nowrap">${escapar(p.descripcion)}</span>
+          <span class="mono" style="flex:none">${p.cantidad_kg.toLocaleString('es-MX')} kg ·
+            ${pesos(p.importe)}</span>
+        </div>`).join('')}
+        <div class="renglon" style="border-top:1px solid var(--border-subtle);
+             margin-top:4px;padding-top:4px">
+          <span style="color:var(--text-muted)">Total</span>
+          <span class="mono" style="color:var(--text-strong)">${pesos(l.pedido.total)}</span>
+        </div>
+      </div>` : ''}
+    </article>`;
+  }).join('');
+}
+
+tick();
+setInterval(tick, 1200);
+</script>
+</body>
+</html>

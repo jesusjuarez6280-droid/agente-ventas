@@ -80,6 +80,11 @@ def describir(cantidad_base: float, presentaciones_producto: str = "") -> str:
     for nombre, factor in candidatas:
         if cantidad_base >= factor and cantidad_base % factor == 0:
             veces = int(cantidad_base / factor)
-            plural = nombre if veces == 1 else f"{nombre}s"
+            # La tabla incluye los alias, y varios ya vienen en plural
+            # ("bultos", "costales"). Sin esta comprobacion sale "15 bultoss".
+            if veces == 1:
+                plural = nombre[:-1] if nombre.endswith("s") else nombre
+            else:
+                plural = nombre if nombre.endswith("s") else f"{nombre}s"
             return f"{base} ({veces} {plural})"
     return base

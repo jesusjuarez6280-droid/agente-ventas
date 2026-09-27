@@ -230,6 +230,8 @@ check("cuando queda al limite, pide confirmar con almacen",
       plan_justo["recomendacion"] == "surtir_confirmando_con_almacen",
       plan_justo.get("nota", ""))
 
+auditoria.cerrar_conversacion(conv, "fin de las pruebas")
+
 # --------------------------------------------------------------------------
 print()
 if fallos:
