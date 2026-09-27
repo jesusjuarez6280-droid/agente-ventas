@@ -56,7 +56,10 @@ async def capturar() -> None:
         await pagina.fill('#form-login input[name="password"]', CLAVE)
         await pagina.click('#form-login button[type="submit"]')
         await pagina.wait_for_selector(".fila", timeout=15000)
-        await pagina.wait_for_timeout(800)
+        await pagina.wait_for_function(
+            "document.querySelector('.barra .nombre')?.textContent.trim() !== '—'",
+            timeout=10000)
+        await pagina.wait_for_timeout(600)
         await pagina.screenshot(path=SALIDA / "2-bandeja.png")
         print("  2-bandeja.png")
 
@@ -88,6 +91,16 @@ async def capturar() -> None:
             print("  5-llamadas-en-curso.png")
         except Exception:
             print("  5-llamadas-en-curso.png  (omitida: no habia llamadas activas)")
+
+        # --- 6. La misma bandeja en modo oscuro --------------------------
+        # El sistema de diseno trae los dos temas; conviene probar que el
+        # panel de verdad los respeta, no solo que existen los tokens.
+        await pagina.goto(f"{BASE}/panel/app/index.html")
+        await pagina.wait_for_selector(".fila", timeout=15000)
+        await pagina.click("#cambiar-tema")
+        await pagina.wait_for_timeout(700)
+        await pagina.screenshot(path=SALIDA / "6-modo-oscuro.png")
+        print("  6-modo-oscuro.png")
 
         await navegador.close()
 

@@ -24,6 +24,7 @@ from pydantic import BaseModel
 
 from .. import auditoria, catalogo, db, inventario, metricas, pedidos, seguridad
 from ..config import CFG
+from ..giro import cargar_giro
 
 app = FastAPI(
     title="Panel del agente de ventas",
@@ -92,8 +93,20 @@ def salir(sesion: dict = Depends(sesion_actual)) -> dict:
 
 @app.get("/api/yo", tags=["sesion"])
 def yo(sesion: dict = Depends(sesion_actual)) -> dict:
-    return {"usuario": sesion["usuario"], "rol": sesion["rol"],
-            "vence_en": sesion["vence_en"]}
+    """Quien eres y para que negocio trabajas.
+
+    El nombre del negocio sale del paquete de giro, no de una constante en el
+    frontend: si manana este mismo panel atiende a una ferreteria, el titulo
+    cambia solo.
+    """
+    g = cargar_giro()
+    return {
+        "usuario": sesion["usuario"],
+        "rol": sesion["rol"],
+        "vence_en": sesion["vence_en"],
+        "negocio": g.get("empresa", CFG.tenant),
+        "giro": CFG.giro,
+    }
 
 
 if _origenes:

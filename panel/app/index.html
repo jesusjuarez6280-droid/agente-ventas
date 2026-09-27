@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bandeja de aprobación</title>
 <link rel="stylesheet" href="../ds/styles.css">
+<link rel="stylesheet" href="armazon.css">
 <style>
   /* Solo lo que el design system no cubre: el armazón de esta pantalla.
      Todo color, espacio y tipografía sale de los tokens de ds/. */
   *{box-sizing:border-box}
-  body{margin:0;background:var(--surface-page);color:var(--text-body);
-       height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  body{margin:0;background:var(--surface-page);color:var(--text-body)}
 
   header{flex:none;display:flex;flex-wrap:wrap;align-items:center;
          gap:var(--space-5) var(--space-8);
@@ -141,6 +141,9 @@
 </footer>
 
 <script type="module">
+import { montarArmazon } from './armazon.js';
+montarArmazon('bandeja');
+
 // ---------------------------------------------------------------------------
 // Bandeja de aprobación, conectada a la API real.
 //

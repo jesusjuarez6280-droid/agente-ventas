@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Llamadas en curso</title>
 <link rel="stylesheet" href="../ds/styles.css">
+<link rel="stylesheet" href="armazon.css">
 <style>
   *{box-sizing:border-box}
-  body{margin:0;background:var(--surface-page);color:var(--text-body);
-       height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  body{margin:0;background:var(--surface-page);color:var(--text-body)}
 
   header{flex:none;display:flex;align-items:center;gap:var(--space-6);
          padding:var(--space-5) var(--space-7);
@@ -76,6 +76,9 @@
 <div class="tablero" id="tablero"></div>
 
 <script type="module">
+import { montarArmazon } from './armazon.js';
+montarArmazon('envivo');
+
 // ---------------------------------------------------------------------------
 // Las llamadas que están ocurriendo ahora.
 //

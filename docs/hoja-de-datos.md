@@ -123,6 +123,20 @@ La pantalla descarta llamadas sin señal en tres minutos: una conversación que 
 cortó sin avisar deja de listarse en vez de aparecer como si el cliente siguiera
 en la línea.
 
+## Sobre el diseño
+
+Las tres pantallas conectadas usan el sistema de diseño entregado por el
+diseñador (`panel/ds/`): sus tokens de color, tipografía, espaciado y
+elevación, sin modificar. La barra lateral y el selector de tema siguen el
+layout de su maqueta.
+
+Ningún dato de pantalla es un valor de relleno: el nombre del negocio y el giro
+salen del paquete de giro vía `/api/yo`, así que cambiar de granos a ferretería
+cambia también el título del panel.
+
+Los dos temas funcionan (`docs/capturas/6-modo-oscuro.png`). La barra pasa a la
+parte inferior por debajo de 860 px de ancho.
+
 ## Qué NO se puede afirmar de este proyecto
 
 Para no exagerar:
